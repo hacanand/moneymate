@@ -1,282 +1,84 @@
-"use client";
+import { useOAuth, useSignIn } from "@clerk/clerk-expo";
+import React, { JSX } from "react";
+import {
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Image } from "expo-image";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
  
-import React,{ useState, useEffect } from "react";
-import {
-  StyleSheet,
-  View,
-  Image,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-} from "react-native";
-import { TextInput, Button, Text, Surface, Divider } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import LocalAuth from "react-native-local-auth";
-import * as WebBrowser from "expo-web-browser";
-import type * as AuthSession from "expo-auth-session";
-import * as Google from "expo-auth-session/providers/google";
 
-// Required for expo-auth-session
-WebBrowser.maybeCompleteAuthSession();
+const LoginScreen: React.FC = (): JSX.Element => {
+  const { signIn, setActive } = useSignIn();
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
 
-interface LoginScreenProps {
-  navigation: {
-    reset: (params: { index: number; routes: { name: string }[] }) => void;
-    navigate: (screen: string) => void;
-  };
-}
-
-const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [secureTextEntry, setSecureTextEntry] = useState<boolean>(true);
-  const [biometricAvailable, setBiometricAvailable] = useState<boolean>(false);
-  const [isSigninInProgress, setIsSigninInProgress] = useState<boolean>(false);
-
-  // Google Auth configuration
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: "YOUR_EXPO_CLIENT_ID",
-    iosClientId: "YOUR_IOS_CLIENT_ID",
-    androidClientId: "YOUR_ANDROID_CLIENT_ID",
-    webClientId: "YOUR_WEB_CLIENT_ID",
-  });
-
-  useEffect(() => {
-    // Check if biometric authentication is available
-    checkBiometricAvailability();
-  }, []);
-
-  // Handle Google Auth response
-  useEffect(() => {
-    if (response?.type === "success") {
-      // Handle successful authentication
-      handleGoogleAuthSuccess(response.authentication);
-    } else if (response?.type === "error") {
-      Alert.alert(
-        "Authentication Error",
-        response.error?.message || "An error occurred during sign in"
-      );
-    }
-  }, [  response]);
-
-  const checkBiometricAvailability = async (): Promise<void> => {
+  const handleGoogleSignIn = async () => {
     try {
-      const available = await LocalAuth.hasTouchID();
-      setBiometricAvailable(available);
-    } catch (error) {
-      console.log("Biometric availability check error:", error);
-    }
-  };
-
-  const handleBiometricLogin = async (): Promise<void> => {
-    try {
-      const success = await LocalAuth.authenticate({
-        reason: "Log in to MoneyMate",
-        fallbackToPasscode: true,
-        suppressEnterPassword: true,
-      });
-
-      if (success) {
-        // In a real app, you would validate with your backend here
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "Main" }],
-        });
+      const { createdSessionId } = await startOAuthFlow();
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
       }
-    } catch (error) {
-      console.log("Authentication error:", error);
-      Alert.alert(
-        "Authentication Failed",
-        "Please try again or use email and password."
-      );
+    } catch (err: any) {
+      Alert.alert("Google Sign-In Error", err?.message || "Unknown error");
     }
-  };
-
-  const handleGoogleSignIn = async (): Promise<void> => {
-    try {
-      setIsSigninInProgress(true);
-      await promptAsync();
-    } catch (error) {
-      console.log("Google sign-in error:", error);
-      Alert.alert("Sign-In Error", "An error occurred during Google sign-in.");
-    } finally {
-      setIsSigninInProgress(false);
-    }
-  };
-
-  const handleGoogleAuthSuccess = async (
-    authentication: AuthSession.TokenResponse | null
-  ): Promise<void> => {
-    if (!authentication) return;
-
-    try {
-      // Get user info using the access token
-      const userInfoResponse = await fetch(
-        "https://www.googleapis.com/userinfo/v2/me",
-        {
-          headers: { Authorization: `Bearer ${authentication.accessToken}` },
-        }
-      );
-
-      const userInfo = await userInfoResponse.json();
-      console.log("Google Sign-In successful:", userInfo);
-
-      // In a real app, you would send this token to your backend
-      // and handle the authentication there
-
-      // Navigate to Main
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Main" }],
-      });
-    } catch (error) {
-      console.log("Error fetching user info:", error);
-      Alert.alert("Authentication Error", "Failed to get user information");
-    }
-  };
-
-  const handleLogin = (): void => {
-    // In a real app, you would validate and authenticate here
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Main" }],
-    });
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidingView}
+      <Animated.View entering={FadeInDown.duration(600)} style={styles.header}>
+        <Image
+          source="../assets/images/logo.png"
+          style={styles.logo}
+          contentFit="cover"
+        />
+        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>
+          Sign in with Google to access your account securely
+        </Text>
+      </Animated.View>
+
+      <Animated.View
+        entering={FadeInDown.duration(600).delay(200)}
+        style={styles.buttonContainer}
       >
-        <ScrollView contentContainerStyle={styles.scrollView}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("../../assets/images/icon.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.appName}>MoneyMate</Text>
-            <Text style={styles.tagline}>Manage your loans with ease</Text>
-          </View>
+        <MaterialCommunityIcons
+          name="google"
+          size={24}
+          color="#fff"
+          style={styles.icon}
+        />
+        <TouchableOpacity onPress={handleGoogleSignIn}>
+          <Text style={styles.buttonText}>Sign in with Google</Text>
+        </TouchableOpacity>
+      </Animated.View>
 
-          <Surface style={styles.formContainer}>
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              mode="outlined"
-              style={styles.input}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              left={
-                <TextInput.Icon
-                  icon={() => (
-                    <MaterialCommunityIcons
-                      name="email"
-                      size={24}
-                      color="gray"
-                    />
-                  )}
-                />
-              }
-            />
-
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              mode="outlined"
-              style={styles.input}
-              secureTextEntry={secureTextEntry}
-              right={
-                <TextInput.Icon
-                  icon={() => (
-                    <MaterialCommunityIcons
-                      name={secureTextEntry ? "eye" : "eye-off"}
-                      size={24}
-                      color="gray"
-                      onPress={() => setSecureTextEntry(!secureTextEntry)}
-                    />
-                  )}
-                />
-              }
-              left={
-                <TextInput.Icon
-                  icon={() => (
-                    <MaterialCommunityIcons
-                      name="lock"
-                      size={24}
-                      color="gray"
-                    />
-                  )}
-                />
-              }
-            />
-
-            <Button
-              mode="contained"
-              onPress={handleLogin}
-              style={styles.button}
-              labelStyle={styles.buttonLabel}
-            >
-              Login
-            </Button>
-
-            {biometricAvailable && (
-              <TouchableOpacity
-                style={styles.biometricButton}
-                onPress={handleBiometricLogin}
-              >
-                <MaterialCommunityIcons
-                  name="fingerprint"
-                  size={24}
-                  color="#2E7D32"
-                />
-                <Text style={styles.biometricText}>Login with Fingerprint</Text>
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.dividerContainer}>
-              <Divider style={styles.divider} />
-              <Text style={styles.dividerText}>OR</Text>
-              <Divider style={styles.divider} />
-            </View>
-
-            <Button
-              mode="outlined"
-              icon={() => (
-                <MaterialCommunityIcons
-                  name="google"
-                  size={20}
-                  color="#DB4437"
-                />
-              )}
-              onPress={handleGoogleSignIn}
-              disabled={isSigninInProgress || !request}
-              style={styles.googleButton}
-              labelStyle={styles.googleButtonLabel}
-            >
-              Sign in with Google
-            </Button>
-
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            <View style={styles.registerContainer}>
-              <Text>Don&apos;t have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-                <Text style={styles.registerText}>Register</Text>
-              </TouchableOpacity>
-            </View>
-          </Surface>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <Animated.View
+        entering={FadeInDown.duration(600).delay(400)}
+        style={styles.infoContainer}
+      >
+        <View style={styles.infoItem}>
+          <MaterialCommunityIcons name="lock" size={20} color="#A0A0A0" />
+          <Text style={styles.infoText}>Secure Authentication</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <MaterialCommunityIcons name="flash" size={20} color="#A0A0A0" />
+          <Text style={styles.infoText}>Fast & Seamless Login</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <MaterialCommunityIcons
+            name="account-check"
+            size={20}
+            color="#A0A0A0"
+          />
+          <Text style={styles.infoText}>Trusted by Millions</Text>
+        </View>
+      </Animated.View>
     </SafeAreaView>
   );
 };
@@ -284,106 +86,62 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollView: {
-    flexGrow: 1,
+    backgroundColor: "#1C2526",
     justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
-  logoContainer: {
+  header: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 40,
   },
   logo: {
     width: 100,
     height: 100,
+    borderRadius: 50,
+    marginBottom: 20,
   },
-  appName: {
+  title: {
     fontSize: 28,
     fontWeight: "bold",
-    fontFamily: "Roboto-Bold",
-    color: "#2E7D32",
-    marginTop: 10,
+    color: "#FFFFFF",
+    marginBottom: 10,
   },
-  tagline: {
+  subtitle: {
     fontSize: 16,
-    fontFamily: "Roboto-Regular",
-    color: "#757575",
-    marginTop: 5,
+    color: "#A0A0A0",
+    textAlign: "center",
   },
-  formContainer: {
-    padding: 20,
-    borderRadius: 10,
-    elevation: 4,
-  },
-  input: {
-    marginBottom: 15,
-  },
-  button: {
-    marginTop: 10,
-    paddingVertical: 6,
-    backgroundColor: "#2E7D32",
-  },
-  buttonLabel: {
-    fontSize: 16,
-    fontFamily: "Roboto-Medium",
-  },
-  biometricButton: {
+  buttonContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 15,
-    padding: 10,
+    backgroundColor: "#4285F4",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginBottom: 30,
   },
-  biometricText: {
+  buttonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
     marginLeft: 10,
-    color: "#2E7D32",
-    fontFamily: "Roboto-Medium",
   },
-  dividerContainer: {
+  icon: {
+    marginRight: 10,
+  },
+  infoContainer: {
+    alignItems: "center",
+  },
+  infoItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 20,
+    marginVertical: 8,
   },
-  divider: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    marginHorizontal: 10,
-    color: "#757575",
-    fontFamily: "Roboto-Regular",
-  },
-  googleButton: {
-    borderColor: "#DB4437",
-    borderWidth: 1,
-    paddingVertical: 6,
-  },
-  googleButtonLabel: {
-    color: "#DB4437",
-    fontFamily: "Roboto-Medium",
-    marginLeft: 8,
-  },
-  forgotPassword: {
-    alignSelf: "flex-end",
-    marginTop: 15,
-  },
-  forgotPasswordText: {
-    color: "#2E7D32",
-    fontFamily: "Roboto-Regular",
-  },
-  registerContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 20,
-  },
-  registerText: {
-    color: "#2E7D32",
-    fontFamily: "Roboto-Medium",
+  infoText: {
+    color: "#A0A0A0",
+    fontSize: 14,
+    marginLeft: 10,
   },
 });
 

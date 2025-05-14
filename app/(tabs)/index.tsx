@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import HomeScreen from "../../components/screens/HomeScreen";
+import { JSX } from "react";
 
 interface NavigationParams {
     loan?: unknown;

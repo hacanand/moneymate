@@ -1,6 +1,7 @@
 "use client";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import LocalAuth from "react-native-local-auth";
 import Modal from "react-native-modalbox";
 import {
   Avatar,
@@ -59,8 +59,9 @@ const ProfileScreen: React.FC<ProfileScreenNavigationProp> = ({
 
   const checkBiometricAvailability = async (): Promise<void> => {
     try {
-      const available = await LocalAuth.hasTouchID();
-      setBiometricAvailable(available);
+      const available = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      setBiometricAvailable(available && enrolled);
     } catch (error) {
       console.log("Biometric availability check error:", error);
     }
@@ -89,15 +90,14 @@ const ProfileScreen: React.FC<ProfileScreenNavigationProp> = ({
     }
 
     if (!biometricEnabled) {
-      // Verify user's identity before enabling biometric login
       try {
-        const success = await LocalAuth.authenticate({
-          reason: "Verify your identity to enable biometric login",
-          fallbackToPasscode: true,
-          suppressEnterPassword: true,
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: "Verify your identity to enable biometric login",
+          fallbackLabel: "Use Passcode",
+          disableDeviceFallback: false,
         });
 
-        if (success) {
+        if (result.success) {
           setBiometricEnabled(true);
           Alert.alert("Success", "Biometric login has been enabled.");
         }
