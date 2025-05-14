@@ -3,8 +3,8 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
+
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -31,7 +31,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const ProfileScreen: React.FC<ProfileScreenNavigationProp> = ({
   navigation,
-}) => {
+}: ProfileScreenNavigationProp) => {
   const [notificationsEnabled, setNotificationsEnabled] =
     useState<boolean>(true);
   const [biometricEnabled, setBiometricEnabled] = useState<boolean>(false);
@@ -55,6 +55,16 @@ const ProfileScreen: React.FC<ProfileScreenNavigationProp> = ({
 
     // Check if user is signed in with Google
     checkGoogleSignIn();
+
+    // Load biometricEnabled from SecureStore
+    (async () => {
+      try {
+        const stored = await SecureStore.getItemAsync("biometric_enabled");
+        setBiometricEnabled(stored === "true");
+      } catch (e) {
+        // ignore
+      }
+    })();
   }, []);
 
   const checkBiometricAvailability = async (): Promise<void> => {
@@ -99,6 +109,7 @@ const ProfileScreen: React.FC<ProfileScreenNavigationProp> = ({
 
         if (result.success) {
           setBiometricEnabled(true);
+          await SecureStore.setItemAsync("biometric_enabled", "true");
           Alert.alert("Success", "Biometric login has been enabled.");
         }
       } catch (error) {
@@ -110,6 +121,7 @@ const ProfileScreen: React.FC<ProfileScreenNavigationProp> = ({
       }
     } else {
       setBiometricEnabled(false);
+      await SecureStore.setItemAsync("biometric_enabled", "false");
       Alert.alert("Disabled", "Biometric login has been disabled.");
     }
   };

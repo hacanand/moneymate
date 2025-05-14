@@ -14,6 +14,11 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+   "androidStatusBar": {
+      "translucent": false,
+      "backgroundColor": "#00000000",
+      // "barStyle": "dark-content"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moneymate.app"
@@ -23,6 +28,7 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#2E7D32"
       },
+       
       "package": "com.moneymate.app"
     },
     "web": {

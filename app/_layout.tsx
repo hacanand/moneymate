@@ -1,11 +1,12 @@
 "use client";
+import InitialLayout from "@/components/initialLayout";
 import { ClerkProvider } from "@clerk/clerk-expo";
 import Constants from "expo-constants";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useCallback } from "react";
+import React, { useCallback } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { DefaultTheme, Provider as PaperProvider } from "react-native-paper";
@@ -22,6 +23,7 @@ const theme = {
     primary: "#2E7D32", // Dark green
     accent: "#4CAF50", // Light green
     background: "#FFFFFF",
+    statusBar: "#2E7D32",
     surface: "#F5F5F5",
   },
 };
@@ -52,31 +54,24 @@ export default function RootLayout() {
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-          <SafeAreaProvider>
+          <SafeAreaProvider
+            style={{
+              flex: 1,
+
+              paddingTop: Constants.statusBarHeight,
+            }}
+          >
             <PaperProvider theme={theme}>
-              <StatusBar style="auto" />
+              <StatusBar backgroundColor="transparent" translucent={true} />
+              {/* <StatusBar style="auto" /> */}
               <Stack
                 screenOptions={{
-                  headerStyle: {
-                    backgroundColor: theme.colors.primary,
-                  },
-                  headerTintColor: "#fff",
-                  headerTitleStyle: {
-                    fontWeight: "bold",
-                    fontFamily: "Roboto-Bold",
-                  },
+                  headerShown: false,
+                  animation: "fade_from_bottom",
+                  animationDuration: 200,
                 }}
               >
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="register"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="loan-details"
-                  options={{ title: "Loan Details" }}
-                />
+                <InitialLayout />
               </Stack>
             </PaperProvider>
           </SafeAreaProvider>
