@@ -34,7 +34,7 @@ const Login: React.FC = (): JSX => {
   
   const handleGoogleSignIn =  async () => {
     try {
-      const { createdSessionId, setActive, signIn, signUp } =
+      const { createdSessionId, setActive  } =
         await startSSOFlow({
           strategy: "oauth_google",
         });

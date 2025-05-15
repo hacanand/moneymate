@@ -16,8 +16,8 @@
     ],
    "androidStatusBar": {
       "translucent": false,
-      "backgroundColor": "#00000000",
-      // "barStyle": "dark-content"
+      "backgroundColor": "#00000000"
+     
     },
     "ios": {
       "supportsTablet": true,

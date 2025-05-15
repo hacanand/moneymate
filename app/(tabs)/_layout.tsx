@@ -1,10 +1,28 @@
 "use client";
 import { Tabs } from "expo-router";
-import { useTheme } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAuth } from "@clerk/clerk-expo";
+import { useEffect } from "react";
+import { router } from "expo-router";
+import { useTheme } from "@/context/ThemeContext";
+ 
 
 export default function TabLayout() {
-  const theme = useTheme();
+  const { theme } = useTheme();
+  const { isLoaded, isSignedIn } = useAuth();
+
+  // Check if user is authenticated
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      // Redirect to login if not signed in
+      router.replace("/");
+    }
+  }, [isLoaded, isSignedIn]);
+
+  // Don't render anything until auth is loaded
+  if (!isLoaded || !isSignedIn) {
+    return null;
+  }
 
   return (
     <Tabs
@@ -25,7 +43,11 @@ export default function TabLayout() {
           );
         },
         tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: "gray",
+        tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.surfaceVariant,
+        },
         tabBarLabelStyle: {
           fontFamily: "Roboto-Medium",
           fontSize: 12,
