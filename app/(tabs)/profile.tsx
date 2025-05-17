@@ -24,8 +24,8 @@ import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import { useTheme } from "../../context/ThemeContext";
-// Import the useThemedAlert hook
-import { useThemedAlert } from "../../components/ThemedAlert";
+// Import the useCustomAlert hook
+import { useCustomAlert } from "../../components/CustomAlert";
 
 // Get screen dimensions
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -49,7 +49,7 @@ export default function ProfileScreen() {
   const aboutModalRef = useRef<any>(null);
 
   // Add this line near the top of the component, after other hooks
-  const { showAlert } = useThemedAlert();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   useEffect(() => {
     // Check if biometric authentication is available
@@ -105,7 +105,6 @@ export default function ProfileScreen() {
             await SecureStore.setItemAsync("biometric_user_id", user.id);
 
             // Store session token (in a real app, use a more secure approach)
-           
             const sessionToken = await getToken();
             if (sessionToken) {
               await SecureStore.setItemAsync(
@@ -542,6 +541,9 @@ export default function ProfileScreen() {
           Close
         </Button>
       </Modal>
+
+      {/* Render the AlertComponent */}
+      <AlertComponent />
     </ScrollView>
   );
 }

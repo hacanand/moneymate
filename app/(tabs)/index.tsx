@@ -26,8 +26,8 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import type { Loan, LoanStatus } from "../../types/loan";
 import { useTheme } from "../../context/ThemeContext";
-// Import the useThemedAlert hook
-import { useThemedAlert } from "../../components/ThemedAlert";
+// Import the useCustomAlert hook
+import { useCustomAlert } from "../../components/CustomAlert";
 
 // Get screen dimensions
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -104,7 +104,7 @@ export default function HomeScreen() {
   const addLoanModalRef = useRef<any>(null);
 
   // Add this line near the top of the component, after other hooks
-  const { showAlert } = useThemedAlert();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const onChangeSearch = (query: string): void => setSearchQuery(query);
 
@@ -619,6 +619,9 @@ export default function HomeScreen() {
           </Button>
         </View>
       </Modal>
+
+      {/* Render the AlertComponent */}
+      <AlertComponent />
     </View>
   );
 }

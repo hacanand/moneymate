@@ -22,7 +22,7 @@ import Modal from "react-native-modalbox";
 import { router, useLocalSearchParams } from "expo-router";
 import type { Loan, Payment, PaymentMethod } from "../types/loan";
 import { useTheme } from "../context/ThemeContext";
-import { useThemedAlert } from "../components/ThemedAlert";
+import { useCustomAlert } from "../components/CustomAlert";
 
 // Get screen dimensions
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -48,7 +48,7 @@ export default function LoanDetailsScreen() {
   const paymentModalRef = useRef<any>(null);
   const reminderModalRef = useRef<any>(null);
 
-  const { showAlert } = useThemedAlert();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   if (!loan) {
     router.back();
@@ -297,7 +297,7 @@ export default function LoanDetailsScreen() {
                 {
                   color:
                     daysRemaining > 0
-                      ? theme.colors.primary
+                      ? "#4CAF50" // green for success
                       : theme.colors.error,
                 },
               ]}
@@ -551,6 +551,9 @@ export default function LoanDetailsScreen() {
           </Button>
         </View>
       </Modal>
+
+      {/* Render the AlertComponent */}
+      <AlertComponent />
     </ScrollView>
   );
 }

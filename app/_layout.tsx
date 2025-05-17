@@ -1,20 +1,18 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import {
-  Provider as PaperProvider,
-  MD3DarkTheme,
-  MD3LightTheme,
-} from "react-native-paper";
+import { Provider as PaperProvider } from "react-native-paper";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ClerkProvider } from "@clerk/clerk-expo";
 import * as SecureStore from "expo-secure-store";
-import { ThemeProvider } from "../context/ThemeContext";
-import { useColorScheme } from "react-native";
+import { ThemeProvider, useTheme } from "../context/ThemeContext";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
+import * as LocalAuthentication from "expo-local-authentication";
+import { useCustomAlert } from "../components/CustomAlert";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -75,108 +73,127 @@ function AppContent({
   onLayoutRootView: () => Promise<void>;
 }) {
   const { theme, isDark } = useTheme();
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { showAlert, AlertComponent } = useCustomAlert();
+
+  useEffect(() => {
+    const checkBiometricAuth = async () => {
+      try {
+        // Check if biometric login is enabled
+        const storedUserId = await SecureStore.getItemAsync(
+          "biometric_user_id"
+        );
+
+        if (storedUserId) {
+          // Biometric is enabled, authenticate
+          const result = await LocalAuthentication.authenticateAsync({
+            promptMessage: "Authenticate to access MoneyMate",
+            fallbackLabel: "Use passcode",
+            disableDeviceFallback: false,
+          });
+
+          if (result.success) {
+            // Authentication successful
+            setIsAuthenticated(true);
+          } else {
+            // Authentication failed
+            showAlert({
+              title: "Authentication Failed",
+              message:
+                "Biometric authentication is required to access the app.",
+              buttons: [
+                {
+                  text: "Try Again",
+                  onPress: () => checkBiometricAuth(),
+                },
+              ],
+            });
+          }
+        } else {
+          // Biometric not enabled, allow access
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error("Biometric authentication error:", error);
+        // If there's an error, allow access but show a warning
+        setIsAuthenticated(true);
+        showAlert({
+          title: "Authentication Error",
+          message:
+            "There was an error with biometric authentication. You can still access the app.",
+          buttons: [{ text: "OK" }],
+        });
+      } finally {
+        setIsAuthenticating(false);
+      }
+    };
+
+    checkBiometricAuth();
+  }, []);
+
+  if (isAuthenticating) {
+    return (
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider onLayout={onLayoutRootView}>
         <PaperProvider theme={theme}>
           <StatusBar style={isDark ? "light" : "dark"} />
-          <Stack
-            screenOptions={{
-              headerStyle: {
-                backgroundColor: theme.colors.primary,
-              },
-              headerTintColor: "#fff",
-              headerTitleStyle: {
-                fontWeight: "bold",
-                fontFamily: "Roboto-Bold",
-              },
-              contentStyle: {
-                backgroundColor: theme.colors.background,
-              },
-            }}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="loan-details"
-              options={{ title: "Loan Details" }}
-            />
-          </Stack>
+          {isAuthenticated ? (
+            <Stack
+              screenOptions={{
+                headerStyle: {
+                  backgroundColor: theme.colors.primary,
+                },
+                headerTintColor: "#fff",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontFamily: "Roboto-Bold",
+                },
+                contentStyle: {
+                  backgroundColor: theme.colors.background,
+                },
+              }}
+            >
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="loan-details"
+                options={{ title: "Loan Details" }}
+              />
+            </Stack>
+          ) : (
+            <View
+              style={[
+                styles.loadingContainer,
+                { backgroundColor: theme.colors.background },
+              ]}
+            >
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          )}
+          <AlertComponent />
         </PaperProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
-// This is a temporary hook to use the theme context
-// It will be replaced by the actual hook from ThemeContext
-function useTheme() {
-  const colorScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(colorScheme === "dark");
-
-  // Custom green theme colors
-  const customGreenColors = {
-    primary: "#2E7D32", // Dark green
-    primaryContainer: "#A5D6A7", // Light green container
-    secondary: "#4CAF50", // Medium green
-    secondaryContainer: "#C8E6C9", // Light green container
-    tertiary: "#1B5E20", // Darker green
-    tertiaryContainer: "#81C784", // Medium green container
-    success: "#4CAF50",
-    error: "#F44336",
-    warning: "#FF9800",
-    info: "#2196F3",
-  };
-
-  // Light theme with green colors
-  const lightTheme = {
-    ...MD3LightTheme,
-    colors: {
-      ...MD3LightTheme.colors,
-      ...customGreenColors,
-      background: "#F5F5F5",
-      surface: "#FFFFFF",
-      surfaceVariant: "#EEEEEE",
-      onSurface: "#212121",
-      onSurfaceVariant: "#757575",
-      elevation: {
-        level0: "transparent",
-        level1: "#FFFFFF",
-        level2: "#F5F5F5",
-        level3: "#EEEEEE",
-        level4: "#E0E0E0",
-        level5: "#BDBDBD",
-      },
-    },
-  };
-
-  // Dark theme with green colors
-  const darkTheme = {
-    ...MD3DarkTheme,
-    colors: {
-      ...MD3DarkTheme.colors,
-      ...customGreenColors,
-      background: "#121212",
-      surface: "#1E1E1E",
-      surfaceVariant: "#2C2C2C",
-      onSurface: "#FFFFFF",
-      onSurfaceVariant: "#BBBBBB",
-      elevation: {
-        level0: "transparent",
-        level1: "#1E1E1E",
-        level2: "#222222",
-        level3: "#272727",
-        level4: "#2C2C2C",
-        level5: "#333333",
-      },
-    },
-  };
-
-  // Get the current theme based on dark mode state
-  const theme = isDark ? darkTheme : lightTheme;
-
-  // This is a temporary implementation
-  // The actual implementation will come from ThemeContext
-  return { theme, isDark, toggleTheme: () => setIsDark(!isDark) };
-}
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

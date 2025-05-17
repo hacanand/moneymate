@@ -19,7 +19,7 @@ import { useAuth, useOAuth, useSSO, useUser } from "@clerk/clerk-expo";
 import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
 import { useTheme } from "../context/ThemeContext";
-import { useThemedAlert } from "../components/ThemedAlert";
+import { useCustomAlert } from "../components/CustomAlert";
 
 // Required for OAuth
 WebBrowser.maybeCompleteAuthSession();
@@ -28,10 +28,10 @@ export default function LoginScreen() {
   const [biometricAvailable, setBiometricAvailable] = useState<boolean>(false);
   const [isSigninInProgress, setIsSigninInProgress] = useState<boolean>(false);
   const { theme, isDark } = useTheme();
-  const { showAlert } = useThemedAlert();
-
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { getToken } = useAuth();
   // Clerk hooks
-    const { isSignedIn, user } = useUser();
+  const { isSignedIn, user } = useUser();
   const { startSSOFlow } = useSSO();
 
   useEffect(() => {
@@ -121,9 +121,7 @@ export default function LoginScreen() {
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: "oauth_google",
       });
-
       if (createdSessionId && setActive) {
-        // If we have a session, set it as active
         await setActive({ session: createdSessionId });
 
         // Store user ID for biometric login
@@ -131,8 +129,7 @@ export default function LoginScreen() {
           await SecureStore.setItemAsync("biometric_user_id", user.id);
 
           // In a real app, you'd need a more secure way to handle this
-            // This is just a simplified example
-         const { getToken } = useAuth();
+          // This is just a simplified example
           const sessionToken = await getToken();
           if (sessionToken) {
             await SecureStore.setItemAsync("clerk_session_token", sessionToken);
@@ -163,7 +160,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollView}>
           <View style={styles.logoContainer}>
             <Image
-              source={require("@/assets/images/icon.png")}
+              source={require("../assets/images/icon.png")}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -223,6 +220,7 @@ export default function LoginScreen() {
           </Surface>
         </ScrollView>
       </KeyboardAvoidingView>
+      <AlertComponent />
     </SafeAreaView>
   );
 }
