@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   Dimensions,
   type ListRenderItem,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import {
   Text,
@@ -82,6 +85,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
   const [addLoanModalOpen, setAddLoanModalOpen] = useState<boolean>(false);
+  const [showPaidLoans, setShowPaidLoans] = useState<boolean>(false);
   const insets = useSafeAreaInsets();
 
   // Add loan form state
@@ -544,204 +548,206 @@ export default function HomeScreen() {
         backdropPressToClose
         swipeToClose
       >
-        <View style={styles.modalHeader}>
-          <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-            Add New Loan
-          </Text>
-          <TouchableOpacity onPress={() => setAddLoanModalOpen(false)}>
-            <MaterialCommunityIcons
-              name="close"
-              size={24}
-              color={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.addLoanForm}>
-          <TextInput
-            label="Borrower Name *"
-            value={borrowerName}
-            onChangeText={setBorrowerName}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            textColor={theme.colors.onSurface}
-          />
-
-          <TextInput
-            label="Phone Number"
-            value={borrowerPhone}
-            onChangeText={setBorrowerPhone}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            keyboardType="phone-pad"
-            textColor={theme.colors.onSurface}
-          />
-
-          <TextInput
-            label="Loan Amount *"
-            value={amount}
-            onChangeText={setAmount}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            keyboardType="numeric"
-            left={
-              <TextInput.Affix
-                text="₹"
-                textStyle={{ color: theme.colors.onSurfaceVariant }}
-              />
-            }
-            textColor={theme.colors.onSurface}
-          />
-
-          <TextInput
-            label="Interest Rate *"
-            value={interestRate}
-            onChangeText={setInterestRate}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            keyboardType="numeric"
-            right={
-              <TextInput.Affix
-                text="%"
-                textStyle={{ color: theme.colors.onSurfaceVariant }}
-              />
-            }
-            textColor={theme.colors.onSurface}
-          />
-
-          <View style={styles.interestRateTypeContainer}>
-            <Text
-              style={[
-                styles.dateLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Interest Rate Type
-            </Text>
-            <View style={styles.methodOptions}>
-              <Chip
-                mode={interestRateType === "monthly" ? "flat" : "outlined"}
-                selected={interestRateType === "monthly"}
-                onPress={() => setInterestRateType("monthly")}
-                style={[
-                  styles.methodChip,
-                  interestRateType === "monthly" && styles.selectedChip,
-                ]}
-                textStyle={
-                  interestRateType === "monthly"
-                    ? styles.selectedChipText
-                    : { color: theme.colors.onSurface }
-                }
-                selectedColor="#FFFFFF"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalHeader}>
+              <Text
+                style={[styles.modalTitle, { color: theme.colors.onSurface }]}
               >
-                Monthly
-              </Chip>
-              <Chip
-                mode={interestRateType === "yearly" ? "flat" : "outlined"}
-                selected={interestRateType === "yearly"}
-                onPress={() => setInterestRateType("yearly")}
-                style={[
-                  styles.methodChip,
-                  interestRateType === "yearly" && styles.selectedChip,
-                ]}
-                textStyle={
-                  interestRateType === "yearly"
-                    ? styles.selectedChipText
-                    : { color: theme.colors.onSurface }
-                }
-                selectedColor="#FFFFFF"
-              >
-                Yearly
-              </Chip>
+                Add New Loan
+              </Text>
+              <TouchableOpacity onPress={() => setAddLoanModalOpen(false)}>
+                <MaterialCommunityIcons
+                  name="close"
+                  size={24}
+                  color={theme.colors.onSurfaceVariant}
+                />
+              </TouchableOpacity>
             </View>
-          </View>
 
-          <View style={styles.dateContainer}>
-            <Text
-              style={[
-                styles.dateLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Start Date
-            </Text>
-            <Button
-              mode="outlined"
-              onPress={() => setShowStartDatePicker(true)}
-              style={styles.dateButton}
-              textColor={theme.colors.primary}
-            >
-              {startDate.toLocaleDateString()}
-            </Button>
-            {showStartDatePicker && (
-              <DateTimePicker
-                value={startDate}
-                mode="date"
-                display="default"
-                onChange={onChangeStartDate}
-                themeVariant={theme.dark ? "dark" : "light"}
+            <View style={styles.addLoanForm}>
+              <TextInput
+                label="Borrower Name *"
+                value={borrowerName}
+                onChangeText={setBorrowerName}
+                mode="outlined"
+                style={[
+                  styles.input,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+                textColor={theme.colors.onSurface}
               />
-            )}
-          </View>
 
-          <View style={styles.dateContainer}>
-            <Text
-              style={[
-                styles.dateLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Due Date
-            </Text>
-            <Button
-              mode="outlined"
-              onPress={() => setShowDueDatePicker(true)}
-              style={styles.dateButton}
-              textColor={theme.colors.primary}
-            >
-              {dueDate.toLocaleDateString()}
-            </Button>
-            {showDueDatePicker && (
-              <DateTimePicker
-                value={dueDate}
-                mode="date"
-                display="default"
-                onChange={onChangeDueDate}
-                themeVariant={theme.dark ? "dark" : "light"}
+              <TextInput
+                label="Phone Number"
+                value={borrowerPhone}
+                onChangeText={setBorrowerPhone}
+                mode="outlined"
+                style={[
+                  styles.input,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+                keyboardType="phone-pad"
+                textColor={theme.colors.onSurface}
               />
-            )}
-          </View>
 
-          <TextInput
-            label="Notes"
-            value={notes}
-            onChangeText={setNotes}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            multiline
-            numberOfLines={3}
-            textColor={theme.colors.onSurface}
-          />
-        </View>
+              <TextInput
+                label="Loan Amount *"
+                value={amount}
+                onChangeText={setAmount}
+                mode="outlined"
+                style={[
+                  styles.input,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+                keyboardType="numeric"
+                left={
+                  <TextInput.Affix
+                    text="₹"
+                    textStyle={{ color: theme.colors.onSurfaceVariant }}
+                  />
+                }
+                textColor={theme.colors.onSurface}
+              />
 
-        <View style={styles.modalActions}>
-          <Button
-            mode="outlined"
-            onPress={() => setAddLoanModalOpen(false)}
-            style={styles.cancelButton}
-            textColor={theme.colors.primary}
-          >
-            Cancel
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleAddLoan}
-            style={styles.saveButton}
-            labelStyle={styles.buttonLabel}
-          >
-            Save Loan
-          </Button>
-        </View>
+              <TextInput
+                label="Interest Rate *"
+                value={interestRate}
+                onChangeText={setInterestRate}
+                mode="outlined"
+                style={[
+                  styles.input,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+                keyboardType="numeric"
+                right={
+                  <TextInput.Affix
+                    text="%"
+                    textStyle={{ color: theme.colors.onSurfaceVariant }}
+                  />
+                }
+                textColor={theme.colors.onSurface}
+              />
+
+              <View style={styles.interestRateTypeContainer}>
+                <Text
+                  style={[
+                    styles.dateLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Interest Rate Type
+                </Text>
+                <View style={styles.methodOptions}>
+                  <Chip
+                    mode={interestRateType === "monthly" ? "flat" : "outlined"}
+                    selected={interestRateType === "monthly"}
+                    onPress={() => setInterestRateType("monthly")}
+                    style={[
+                      styles.methodChip,
+                      interestRateType === "monthly" && styles.selectedChip,
+                    ]}
+                    textStyle={
+                      interestRateType === "monthly"
+                        ? styles.selectedChipText
+                        : { color: theme.colors.onSurface }
+                    }
+                    selectedColor="#FFFFFF"
+                  >
+                    Monthly
+                  </Chip>
+                  <Chip
+                    mode={interestRateType === "yearly" ? "flat" : "outlined"}
+                    selected={interestRateType === "yearly"}
+                    onPress={() => setInterestRateType("yearly")}
+                    style={[
+                      styles.methodChip,
+                      interestRateType === "yearly" && styles.selectedChip,
+                    ]}
+                    textStyle={
+                      interestRateType === "yearly"
+                        ? styles.selectedChipText
+                        : { color: theme.colors.onSurface }
+                    }
+                    selectedColor="#FFFFFF"
+                  >
+                    Yearly
+                  </Chip>
+                </View>
+              </View>
+
+              <View style={styles.dateContainer}>
+                <Text
+                  style={[
+                    styles.dateLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Start Date
+                </Text>
+                <Button
+                  mode="outlined"
+                  onPress={() => setShowStartDatePicker(true)}
+                  style={styles.dateButton}
+                  textColor={theme.colors.primary}
+                >
+                  {startDate.toLocaleDateString()}
+                </Button>
+                {showStartDatePicker && (
+                  <DateTimePicker
+                    value={startDate}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "inline" : "calendar"}
+                    onChange={onChangeStartDate}
+                    themeVariant={theme.dark ? "dark" : "light"}
+                    textColor={theme.dark ? "#fff" : undefined}
+                    accentColor={theme.colors.primary}
+                    style={{ backgroundColor: theme.dark ? "#222" : "#fff" }}
+                  />
+                )}
+              </View>
+
+              <TextInput
+                label="Notes"
+                value={notes}
+                onChangeText={setNotes}
+                mode="outlined"
+                style={[
+                  styles.input,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+                multiline
+                numberOfLines={3}
+                textColor={theme.colors.onSurface}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <Button
+                mode="outlined"
+                onPress={() => setAddLoanModalOpen(false)}
+                style={styles.cancelButton}
+                textColor={theme.colors.primary}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleAddLoan}
+                style={styles.saveButton}
+                labelStyle={styles.buttonLabel}
+              >
+                Save Loan
+              </Button>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Render the AlertComponent */}
@@ -874,8 +880,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   addLoanModal: {
-    height: 550,
-    width: SCREEN_WIDTH - 40,
+    minWidth: 320,
+    maxWidth: SCREEN_WIDTH - 24,
+    minHeight: 200,
+    maxHeight: "90%",
     borderRadius: 20,
     padding: 20,
   },
