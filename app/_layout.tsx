@@ -1,6 +1,6 @@
 "use client";
 import { ClerkProvider } from "@clerk/clerk-expo";
-import { useFonts } from "expo-font";
+import { isLoaded, useFonts } from "expo-font";
 import * as LocalAuthentication from "expo-local-authentication";
 import { Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -169,7 +169,7 @@ function AppContent({
                 contentStyle: {
                   backgroundColor: theme.colors.background,
                 },
-                animation: "slide_from_right", // Use native smooth slide animation
+                animation:  "slide_from_right", // Use native smooth slide animation
               }}
             >
               <Stack.Screen name="index" options={{ headerShown: false }} />

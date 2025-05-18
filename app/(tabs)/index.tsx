@@ -1,34 +1,31 @@
 "use client";
 
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { router } from "expo-router";
-import { useRef, useState } from "react";
+import { useState, useRef } from "react";
 import {
-  Dimensions,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
+  FlatList,
+  TouchableOpacity,
+  Dimensions,
   type ListRenderItem,
 } from "react-native";
-import Modal from "react-native-modalbox";
 import {
-  Button,
+  Text,
+  FAB,
+  Surface,
   Card,
   Chip,
-  FAB,
   Searchbar,
-  Surface,
-  Text,
+  Button,
   TextInput,
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../../context/ThemeContext";
+import Modal from "react-native-modalbox";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { router } from "expo-router";
 import type { Loan, LoanStatus } from "../../types/loan";
+import { useTheme } from "../../context/ThemeContext";
 // Import the useCustomAlert hook
 import { useCustomAlert } from "../../components/CustomAlert";
 
@@ -41,37 +38,41 @@ const initialLoans: Loan[] = [
     id: "1",
     borrowerName: "John Smith",
     amount: 5000,
-    date: "2025-05-01",
-    dueDate: "2025-06-01",
+    date: "2023-05-01",
+    dueDate: "2023-06-01",
     status: "active",
     interestRate: 5,
+    interestRateType: "monthly",
   },
   {
     id: "2",
     borrowerName: "Sarah Johnson",
     amount: 2500,
-    date: "2025-04-15",
-    dueDate: "2025-05-15",
-    status: "overdue",
+    date: "2023-04-15",
+    dueDate: "2023-05-15",
+    status: "active",
     interestRate: 5,
+    interestRateType: "monthly",
   },
   {
     id: "3",
     borrowerName: "Michael Brown",
     amount: 10000,
-    date: "2025-03-20",
-    dueDate: "2025-09-20",
+    date: "2023-03-20",
+    dueDate: "2023-09-20",
     status: "active",
     interestRate: 6,
+    interestRateType: "yearly",
   },
   {
     id: "4",
     borrowerName: "Emily Davis",
     amount: 1500,
-    date: "2025-04-10",
-    dueDate: "2025-05-10",
+    date: "2023-04-10",
+    dueDate: "2023-05-10",
     status: "paid",
     interestRate: 4,
+    interestRateType: "monthly",
   },
 ];
 
@@ -89,9 +90,13 @@ export default function HomeScreen() {
   const [amount, setAmount] = useState<string>("");
   const [interestRate, setInterestRate] = useState<string>("");
   const [startDate, setStartDate] = useState<Date>(new Date());
+  const [dueDate, setDueDate] = useState<Date>(
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  ); // 30 days from now
   const [notes, setNotes] = useState<string>("");
   const [showStartDatePicker, setShowStartDatePicker] =
     useState<boolean>(false);
+  const [showDueDatePicker, setShowDueDatePicker] = useState<boolean>(false);
   const [collateralRequired, setCollateralRequired] = useState<boolean>(false);
   const [collateralDetails, setCollateralDetails] = useState<string>("");
   const [interestRateType, setInterestRateType] = useState<
@@ -117,15 +122,13 @@ export default function HomeScreen() {
     .filter((loan) => statusFilter === "all" || loan.status === statusFilter);
 
   const totalActive = loans
-    .filter((loan) => loan.status === "active" || loan.status === "overdue")
+    .filter((loan) => loan.status === "active")
     .reduce((sum, loan) => sum + loan.amount, 0);
 
   const getStatusColor = (status: LoanStatus): string => {
     switch (status) {
       case "active":
         return "#4CAF50";
-      case "overdue":
-        return "#F44336";
       case "paid":
         return "#2196F3";
       default:
@@ -133,67 +136,159 @@ export default function HomeScreen() {
     }
   };
 
-  const renderLoanItem: ListRenderItem<Loan> = ({ item }) => (
-    <TouchableOpacity
-      onPress={() =>
-        router.push({
-          pathname: "/loan-details",
-          params: { loan: JSON.stringify(item) },
-        })
-      }
-    >
-      <Card
-        style={[styles.loanCard, { backgroundColor: theme.colors.surface }]}
+  // First, let's add a function to calculate interest earned so far
+  // Add this function before the renderLoanItem function:
+
+  const calculateInterestEarned = (loan: Loan): number => {
+    const principal = loan.amount;
+    const interestRate = loan.interestRate / 100;
+    const loanStartDate = new Date(loan.date);
+    const currentDate = new Date();
+
+    // Calculate duration in days from loan start to now
+    const durationInDays = Math.max(
+      0,
+      Math.ceil(
+        (currentDate.getTime() - loanStartDate.getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+    );
+
+    let interest = 0;
+    if (loan.interestRateType === "yearly") {
+      // Convert days to years for calculation
+      const durationInYears = durationInDays / 365;
+      interest = principal * interestRate * durationInYears;
+    } else {
+      // Default to monthly - convert days to months for calculation
+      const durationInMonths = durationInDays / 30;
+      interest = principal * interestRate * durationInMonths;
+    }
+
+    return interest;
+  };
+
+  // Now, let's completely replace the renderLoanItem function with a more beautiful design:
+
+  const renderLoanItem: ListRenderItem<Loan> = ({ item }) => {
+    const interestEarned = calculateInterestEarned(item);
+
+    return (
+      <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/loan-details",
+            params: { loan: JSON.stringify(item) },
+          })
+        }
       >
-        <Card.Content>
-          <View style={styles.loanHeader}>
-            <View>
-              <Text
-                style={[styles.borrowerName, { color: theme.colors.onSurface }]}
-              >
-                {item.borrowerName}
-              </Text>
+        <Card
+          style={[styles.loanCard, { backgroundColor: theme.colors.surface }]}
+          mode="elevated"
+        >
+          <Card.Content>
+            <View style={styles.cardHeader}>
+              <View style={styles.nameStatusContainer}>
+                <Text
+                  style={[
+                    styles.borrowerName,
+                    { color: theme.colors.onSurface },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {item.borrowerName}
+                </Text>
+                <Chip
+                  mode="flat"
+                  textStyle={{
+                    color: "#FFFFFF",
+                    fontFamily: "Roboto-Medium",
+                    fontSize: 12,
+                  }}
+                  style={{
+                    backgroundColor: getStatusColor(item.status),
+                    height: 32,
+                    paddingHorizontal: 8,
+                  }}
+                  compact
+                >
+                  {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                </Chip>
+              </View>
+            </View>
+
+            <View style={styles.amountContainer}>
               <Text
                 style={[styles.loanAmount, { color: theme.colors.primary }]}
               >
                 ₹{item.amount.toLocaleString()}
               </Text>
+              <Text
+                style={[
+                  styles.loanDate,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                {new Date(item.date).toLocaleDateString()}
+              </Text>
             </View>
-            <Chip
-              mode="outlined"
-              textStyle={{ color: getStatusColor(item.status) }}
-              style={{ borderColor: getStatusColor(item.status) }}
-            >
-              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-            </Chip>
-          </View>
-          <View style={styles.loanDetails}>
-            <Text
-              style={[
-                styles.detailText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Interest: {item.interestRate}%
-            </Text>
-            <Text
-              style={[
-                styles.detailText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Due: {new Date(item.dueDate).toLocaleDateString()}
-            </Text>
-          </View>
-        </Card.Content>
-      </Card>
-    </TouchableOpacity>
-  );
+
+            <View style={styles.divider} />
+
+            <View style={styles.detailsGrid}>
+              <View style={styles.detailItem}>
+                <Text
+                  style={[
+                    styles.detailLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Interest Rate
+                </Text>
+                <Text
+                  style={[
+                    styles.detailValue,
+                    { color: theme.colors.onSurface },
+                  ]}
+                >
+                  {item.interestRate}%{" "}
+                  {item.interestRateType === "yearly"
+                    ? "(yearly)"
+                    : "(monthly)"}
+                </Text>
+              </View>
+
+              <View style={styles.detailItem}>
+                <Text
+                  style={[
+                    styles.detailLabel,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Interest Earned
+                </Text>
+                <Text style={[styles.detailValue, { color: "#4CAF50" }]}>
+                  ₹{interestEarned.toFixed(2)}
+                </Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   const onChangeStartDate = (event: any, selectedDate?: Date): void => {
     const currentDate = selectedDate || startDate;
     setShowStartDatePicker(false);
     setStartDate(currentDate);
+  };
+
+  const onChangeDueDate = (event: any, selectedDate?: Date): void => {
+    const currentDate = selectedDate || dueDate;
+    setShowDueDatePicker(false);
+    setDueDate(currentDate);
   };
 
   // Update the handleAddLoan function
@@ -213,9 +308,7 @@ export default function HomeScreen() {
       borrowerName,
       amount: Number.parseFloat(amount),
       date: startDate.toISOString().split("T")[0],
-      dueDate: new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
+      dueDate: dueDate.toISOString().split("T")[0],
       status: "active",
       interestRate: Number.parseFloat(interestRate),
       interestRateType: interestRateType,
@@ -239,6 +332,7 @@ export default function HomeScreen() {
     setInterestRate("");
     setInterestRateType("monthly");
     setStartDate(new Date());
+    setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
     setNotes("");
     setCollateralRequired(false);
     setCollateralDetails("");
@@ -364,6 +458,7 @@ export default function HomeScreen() {
           <Text style={[styles.filterLabel, { color: theme.colors.onSurface }]}>
             Status
           </Text>
+          {/* Find the statusButtons View in the Filter Modal and replace it with: */}
           <View style={styles.statusButtons}>
             <Chip
               mode={statusFilter === "all" ? "flat" : "outlined"}
@@ -398,23 +493,6 @@ export default function HomeScreen() {
               selectedColor="#FFFFFF"
             >
               Active
-            </Chip>
-            <Chip
-              mode={statusFilter === "overdue" ? "flat" : "outlined"}
-              selected={statusFilter === "overdue"}
-              onPress={() => setStatusFilter("overdue")}
-              style={[
-                styles.statusChip,
-                statusFilter === "overdue" && styles.selectedChip,
-              ]}
-              textStyle={
-                statusFilter === "overdue"
-                  ? styles.selectedChipText
-                  : { color: theme.colors.onSurface }
-              }
-              selectedColor="#FFFFFF"
-            >
-              Overdue
             </Chip>
             <Chip
               mode={statusFilter === "paid" ? "flat" : "outlined"}
@@ -466,206 +544,204 @@ export default function HomeScreen() {
         backdropPressToClose
         swipeToClose
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-        >
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
+        <View style={styles.modalHeader}>
+          <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
+            Add New Loan
+          </Text>
+          <TouchableOpacity onPress={() => setAddLoanModalOpen(false)}>
+            <MaterialCommunityIcons
+              name="close"
+              size={24}
+              color={theme.colors.onSurfaceVariant}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.addLoanForm}>
+          <TextInput
+            label="Borrower Name *"
+            value={borrowerName}
+            onChangeText={setBorrowerName}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            textColor={theme.colors.onSurface}
+          />
+
+          <TextInput
+            label="Phone Number"
+            value={borrowerPhone}
+            onChangeText={setBorrowerPhone}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            keyboardType="phone-pad"
+            textColor={theme.colors.onSurface}
+          />
+
+          <TextInput
+            label="Loan Amount *"
+            value={amount}
+            onChangeText={setAmount}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            keyboardType="numeric"
+            left={
+              <TextInput.Affix
+                text="₹"
+                textStyle={{ color: theme.colors.onSurfaceVariant }}
+              />
+            }
+            textColor={theme.colors.onSurface}
+          />
+
+          <TextInput
+            label="Interest Rate *"
+            value={interestRate}
+            onChangeText={setInterestRate}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            keyboardType="numeric"
+            right={
+              <TextInput.Affix
+                text="%"
+                textStyle={{ color: theme.colors.onSurfaceVariant }}
+              />
+            }
+            textColor={theme.colors.onSurface}
+          />
+
+          <View style={styles.interestRateTypeContainer}>
+            <Text
+              style={[
+                styles.dateLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Interest Rate Type
+            </Text>
+            <View style={styles.methodOptions}>
+              <Chip
+                mode={interestRateType === "monthly" ? "flat" : "outlined"}
+                selected={interestRateType === "monthly"}
+                onPress={() => setInterestRateType("monthly")}
+                style={[
+                  styles.methodChip,
+                  interestRateType === "monthly" && styles.selectedChip,
+                ]}
+                textStyle={
+                  interestRateType === "monthly"
+                    ? styles.selectedChipText
+                    : { color: theme.colors.onSurface }
+                }
+                selectedColor="#FFFFFF"
+              >
+                Monthly
+              </Chip>
+              <Chip
+                mode={interestRateType === "yearly" ? "flat" : "outlined"}
+                selected={interestRateType === "yearly"}
+                onPress={() => setInterestRateType("yearly")}
+                style={[
+                  styles.methodChip,
+                  interestRateType === "yearly" && styles.selectedChip,
+                ]}
+                textStyle={
+                  interestRateType === "yearly"
+                    ? styles.selectedChipText
+                    : { color: theme.colors.onSurface }
+                }
+                selectedColor="#FFFFFF"
+              >
+                Yearly
+              </Chip>
+            </View>
+          </View>
+
+          <View style={styles.dateContainer}>
+            <Text
+              style={[
+                styles.dateLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Start Date
+            </Text>
+            <Button
+              mode="outlined"
+              onPress={() => setShowStartDatePicker(true)}
+              style={styles.dateButton}
+              textColor={theme.colors.primary}
+            >
+              {startDate.toLocaleDateString()}
+            </Button>
+            {showStartDatePicker && (
+              <DateTimePicker
+                value={startDate}
+                mode="date"
+                display="default"
+                onChange={onChangeStartDate}
+                themeVariant={theme.dark ? "dark" : "light"}
+              />
+            )}
+          </View>
+
+          <View style={styles.dateContainer}>
+            <Text
+              style={[
+                styles.dateLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Due Date
+            </Text>
+            <Button
+              mode="outlined"
+              onPress={() => setShowDueDatePicker(true)}
+              style={styles.dateButton}
+              textColor={theme.colors.primary}
+            >
+              {dueDate.toLocaleDateString()}
+            </Button>
+            {showDueDatePicker && (
+              <DateTimePicker
+                value={dueDate}
+                mode="date"
+                display="default"
+                onChange={onChangeDueDate}
+                themeVariant={theme.dark ? "dark" : "light"}
+              />
+            )}
+          </View>
+
+          <TextInput
+            label="Notes"
+            value={notes}
+            onChangeText={setNotes}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            multiline
+            numberOfLines={3}
+            textColor={theme.colors.onSurface}
+          />
+        </View>
+
+        <View style={styles.modalActions}>
+          <Button
+            mode="outlined"
+            onPress={() => setAddLoanModalOpen(false)}
+            style={styles.cancelButton}
+            textColor={theme.colors.primary}
           >
-            <View style={styles.modalHeader}>
-              <Text
-                style={[styles.modalTitle, { color: theme.colors.onSurface }]}
-              >
-                Add New Loan
-              </Text>
-              <TouchableOpacity onPress={() => setAddLoanModalOpen(false)}>
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={theme.colors.onSurfaceVariant}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.addLoanForm}>
-              <TextInput
-                label="Borrower Name *"
-                value={borrowerName}
-                onChangeText={setBorrowerName}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                textColor={theme.colors.onSurface}
-              />
-
-              <TextInput
-                label="Phone Number"
-                value={borrowerPhone}
-                onChangeText={setBorrowerPhone}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                keyboardType="phone-pad"
-                textColor={theme.colors.onSurface}
-              />
-
-              <TextInput
-                label="Loan Amount *"
-                value={amount}
-                onChangeText={setAmount}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                keyboardType="numeric"
-                left={
-                  <TextInput.Affix
-                    text="₹"
-                    textStyle={{ color: theme.colors.onSurfaceVariant }}
-                  />
-                }
-                textColor={theme.colors.onSurface}
-              />
-
-              <TextInput
-                label="Interest Rate *"
-                value={interestRate}
-                onChangeText={setInterestRate}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                keyboardType="numeric"
-                right={
-                  <TextInput.Affix
-                    text="%"
-                    textStyle={{ color: theme.colors.onSurfaceVariant }}
-                  />
-                }
-                textColor={theme.colors.onSurface}
-              />
-
-              <View style={styles.interestRateTypeContainer}>
-                <Text
-                  style={[
-                    styles.dateLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Interest Rate Type
-                </Text>
-                <View style={styles.methodOptions}>
-                  <Chip
-                    mode={interestRateType === "monthly" ? "flat" : "outlined"}
-                    selected={interestRateType === "monthly"}
-                    onPress={() => setInterestRateType("monthly")}
-                    style={[
-                      styles.methodChip,
-                      interestRateType === "monthly" && styles.selectedChip,
-                    ]}
-                    textStyle={
-                      interestRateType === "monthly"
-                        ? styles.selectedChipText
-                        : { color: theme.colors.onSurface }
-                    }
-                    selectedColor="#FFFFFF"
-                  >
-                    Monthly
-                  </Chip>
-                  <Chip
-                    mode={interestRateType === "yearly" ? "flat" : "outlined"}
-                    selected={interestRateType === "yearly"}
-                    onPress={() => setInterestRateType("yearly")}
-                    style={[
-                      styles.methodChip,
-                      interestRateType === "yearly" && styles.selectedChip,
-                    ]}
-                    textStyle={
-                      interestRateType === "yearly"
-                        ? styles.selectedChipText
-                        : { color: theme.colors.onSurface }
-                    }
-                    selectedColor="#FFFFFF"
-                  >
-                    Yearly
-                  </Chip>
-                </View>
-              </View>
-
-              <View style={styles.dateContainer}>
-                <Text
-                  style={[
-                    styles.dateLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Start Date
-                </Text>
-                <Button
-                  mode="outlined"
-                  onPress={() => setShowStartDatePicker(true)}
-                  style={styles.dateButton}
-                  textColor={theme.colors.primary}
-                >
-                  {startDate.toLocaleDateString()}
-                </Button>
-                {showStartDatePicker && (
-                  <DateTimePicker
-                    value={startDate}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "inline" : "calendar"}
-                    onChange={onChangeStartDate}
-                    themeVariant={theme.dark ? "dark" : "light"}
-                    textColor={theme.dark ? "#fff" : undefined}
-                    accentColor={theme.colors.primary}
-                    style={{ backgroundColor: theme.dark ? "#222" : "#fff" }}
-                  />
-                )}
-              </View>
-
-              <TextInput
-                label="Notes"
-                value={notes}
-                onChangeText={setNotes}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                multiline
-                numberOfLines={3}
-                textColor={theme.colors.onSurface}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <Button
-                mode="outlined"
-                onPress={() => setAddLoanModalOpen(false)}
-                style={styles.cancelButton}
-                textColor={theme.colors.primary}
-              >
-                Cancel
-              </Button>
-              <Button
-                mode="contained"
-                onPress={handleAddLoan}
-                style={styles.saveButton}
-                labelStyle={styles.buttonLabel}
-              >
-                Save Loan
-              </Button>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+            Cancel
+          </Button>
+          <Button
+            mode="contained"
+            onPress={handleAddLoan}
+            style={styles.saveButton}
+            labelStyle={styles.buttonLabel}
+          >
+            Save Loan
+          </Button>
+        </View>
       </Modal>
 
       {/* Render the AlertComponent */}
@@ -712,8 +788,61 @@ const styles = StyleSheet.create({
     paddingBottom: 80, // Extra padding for FAB
   },
   loanCard: {
+    marginBottom: 16,
+    borderRadius: 12,
+    elevation: 3,
+  },
+  cardHeader: {
     marginBottom: 12,
-    borderRadius: 8,
+  },
+  nameStatusContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+  },
+  borrowerName: {
+    fontSize: 18,
+    fontFamily: "Roboto-Bold",
+    flex: 1,
+    marginRight: 8,
+  },
+  amountContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 0,
+    marginTop: 0,
+  },
+  loanAmount: {
+    fontSize: 24,
+    fontFamily: "Roboto-Bold",
+  },
+  loanDate: {
+    fontSize: 14,
+    fontFamily: "Roboto-Regular",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.1)",
+    marginVertical: 12,
+  },
+  detailsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  detailItem: {
+    paddingRight: 8,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontFamily: "Roboto-Regular",
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 16,
+    fontFamily: "Roboto-Medium",
   },
   loanHeader: {
     flexDirection: "row",
@@ -721,11 +850,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 8,
   },
-  borrowerName: {
-    fontSize: 16,
-    fontFamily: "Roboto-Medium",
-  },
-  loanAmount: {
+  loanAmountOld: {
     fontSize: 18,
     fontFamily: "Roboto-Bold",
     marginTop: 4,
@@ -849,9 +974,9 @@ const styles = StyleSheet.create({
   methodOptions: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 8,
   },
   methodChip: {
     margin: 4,
   },
 });
+  
