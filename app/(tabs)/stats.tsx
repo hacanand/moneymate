@@ -56,7 +56,7 @@ export default function StatsScreen() {
               <Text
                 style={[styles.statValue, { color: theme.colors.onSurface }]}
               >
-                $17,500
+                ₹17,500
               </Text>
               <Text
                 style={[
@@ -76,7 +76,7 @@ export default function StatsScreen() {
               <Text
                 style={[styles.statValue, { color: theme.colors.onSurface }]}
               >
-                $1,500
+                ₹1,500
               </Text>
               <Text
                 style={[
@@ -96,7 +96,7 @@ export default function StatsScreen() {
               <Text
                 style={[styles.statValue, { color: theme.colors.onSurface }]}
               >
-                $2,500
+                ₹2,500
               </Text>
               <Text
                 style={[
@@ -128,7 +128,7 @@ export default function StatsScreen() {
                 { color: theme.colors.primary },
               ]}
             >
-              $875
+              ₹875
             </Text>
             <Text
               style={[
@@ -166,7 +166,7 @@ export default function StatsScreen() {
             <Text
               style={[styles.paymentAmount, { color: theme.colors.primary }]}
             >
-              $500
+              ₹500
             </Text>
           </View>
           <View
@@ -194,7 +194,7 @@ export default function StatsScreen() {
             <Text
               style={[styles.paymentAmount, { color: theme.colors.primary }]}
             >
-              $250
+              ₹250
             </Text>
           </View>
           <View
@@ -222,7 +222,7 @@ export default function StatsScreen() {
             <Text
               style={[styles.paymentAmount, { color: theme.colors.primary }]}
             >
-              $1,000
+              ₹1,000
             </Text>
           </View>
         </Card.Content>

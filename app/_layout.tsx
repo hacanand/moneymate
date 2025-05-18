@@ -1,18 +1,25 @@
 "use client";
-import { useCallback, useState, useEffect } from "react";
-import { Stack } from "expo-router";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Provider as PaperProvider } from "react-native-paper";
-import { StatusBar } from "expo-status-bar";
-import { useFonts } from "expo-font";
-import * as SplashScreen from "expo-splash-screen";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ClerkProvider } from "@clerk/clerk-expo";
-import * as SecureStore from "expo-secure-store";
-import { ThemeProvider, useTheme } from "../context/ThemeContext";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { useNavigationState } from "@react-navigation/native";
+import { useFonts } from "expo-font";
 import * as LocalAuthentication from "expo-local-authentication";
+import { Stack } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  StyleSheet,
+  View,
+} from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Provider as PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useCustomAlert } from "../components/CustomAlert";
+import { ThemeProvider, useTheme } from "../context/ThemeContext";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -76,6 +83,42 @@ function AppContent({
   const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { showAlert, AlertComponent } = useCustomAlert();
+
+  // Animation for loan-details
+  const [showLoanAnim, setShowLoanAnim] = useState(false);
+  const loanAnim = useRef(new Animated.Value(0)).current;
+  const prevRouteName = useRef<string | null>(null);
+  const navigationState = useNavigationState((state) => state);
+  const [animDirection, setAnimDirection] = useState<"push" | "pop" | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!navigationState) return;
+    const routes = navigationState.routes;
+    const currentRoute = routes[routes.length - 1]?.name;
+    // Determine direction: push if going to loan-details, pop if leaving
+    let direction: "push" | "pop" | null = null;
+    if (prevRouteName.current !== currentRoute) {
+      if (currentRoute === "loan-details") direction = "push";
+      else if (prevRouteName.current === "loan-details") direction = "pop";
+    }
+    if (direction) {
+      setShowLoanAnim(true);
+      setAnimDirection(direction);
+      loanAnim.setValue(direction === "push" ? 1 : 0);
+      Animated.timing(loanAnim, {
+        toValue: direction === "push" ? 0 : 1,
+        duration: 350,
+        easing: Easing.out(Easing.poly(5)),
+        useNativeDriver: true,
+      }).start(() => {
+        setShowLoanAnim(false);
+        setAnimDirection(null);
+      });
+    }
+    prevRouteName.current = currentRoute;
+  }, [navigationState]);
 
   useEffect(() => {
     const checkBiometricAuth = async () => {
@@ -150,6 +193,29 @@ function AppContent({
       <SafeAreaProvider onLayout={onLayoutRootView}>
         <PaperProvider theme={theme}>
           <StatusBar style={isDark ? "light" : "dark"} />
+          {showLoanAnim && (
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                ...StyleSheet.absoluteFillObject,
+                zIndex: 100,
+                backgroundColor: theme.colors.background,
+                transform: [
+                  {
+                    translateX: loanAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange:
+                        animDirection === "pop" ? [-400, 0] : [400, 0],
+                    }),
+                  },
+                ],
+                opacity: loanAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0.7],
+                }),
+              }}
+            />
+          )}
           {isAuthenticated ? (
             <Stack
               screenOptions={{

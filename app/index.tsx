@@ -167,10 +167,8 @@ export default function LoginScreen() {
             <Text style={[styles.appName, { color: theme.colors.primary }]}>
               MoneyMate
             </Text>
-            <Text
-              style={[styles.tagline, { color: theme.colors.onSurfaceVariant }]}
-            >
-              Manage your loans with ease
+            <Text style={[styles.tagline, { color: theme.colors.onSurfaceVariant }]}>
+              Manage your rupee loans with ease
             </Text>
           </View>
 

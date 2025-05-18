@@ -1,10 +1,10 @@
 "use client";
 
+import * as SecureStore from "expo-secure-store";
 import type React from "react";
-import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useColorScheme } from "react-native";
 import { MD3DarkTheme, MD3LightTheme } from "react-native-paper";
-import * as SecureStore from "expo-secure-store";
 
 // Define theme types
 type ThemeType = typeof MD3LightTheme;
@@ -101,7 +101,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     loadThemePreference();
-  }, []);
+  }, [colorScheme]);
 
   // Toggle theme function
   const toggleTheme = async () => {

@@ -95,6 +95,9 @@ export default function HomeScreen() {
   const [showDueDatePicker, setShowDueDatePicker] = useState<boolean>(false);
   const [collateralRequired, setCollateralRequired] = useState<boolean>(false);
   const [collateralDetails, setCollateralDetails] = useState<string>("");
+  const [interestRateType, setInterestRateType] = useState<
+    "monthly" | "yearly"
+  >("monthly");
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<"all" | LoanStatus>("all");
@@ -154,7 +157,7 @@ export default function HomeScreen() {
               <Text
                 style={[styles.loanAmount, { color: theme.colors.primary }]}
               >
-                ${item.amount.toLocaleString()}
+                ₹{item.amount.toLocaleString()}
               </Text>
             </View>
             <Chip
@@ -220,6 +223,7 @@ export default function HomeScreen() {
       dueDate: dueDate.toISOString().split("T")[0],
       status: "active",
       interestRate: Number.parseFloat(interestRate),
+      interestRateType: interestRateType,
       borrowerPhone,
       notes,
       collateral: collateralRequired ? collateralDetails : undefined,
@@ -238,6 +242,7 @@ export default function HomeScreen() {
     setBorrowerPhone("");
     setAmount("");
     setInterestRate("");
+    setInterestRateType("monthly");
     setStartDate(new Date());
     setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
     setNotes("");
@@ -287,7 +292,7 @@ export default function HomeScreen() {
             Total Active Loans
           </Text>
           <Text style={[styles.summaryAmount, { color: theme.colors.primary }]}>
-            ${totalActive.toLocaleString()}
+            ₹{totalActive.toLocaleString()}
           </Text>
         </Surface>
       </View>
@@ -509,7 +514,7 @@ export default function HomeScreen() {
             keyboardType="numeric"
             left={
               <TextInput.Affix
-                text="$"
+                text="₹"
                 textStyle={{ color: theme.colors.onSurfaceVariant }}
               />
             }
@@ -531,6 +536,53 @@ export default function HomeScreen() {
             }
             textColor={theme.colors.onSurface}
           />
+
+          <View style={styles.interestRateTypeContainer}>
+            <Text
+              style={[
+                styles.dateLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Interest Rate Type
+            </Text>
+            <View style={styles.methodOptions}>
+              <Chip
+                mode={interestRateType === "monthly" ? "flat" : "outlined"}
+                selected={interestRateType === "monthly"}
+                onPress={() => setInterestRateType("monthly")}
+                style={[
+                  styles.methodChip,
+                  interestRateType === "monthly" && styles.selectedChip,
+                ]}
+                textStyle={
+                  interestRateType === "monthly"
+                    ? styles.selectedChipText
+                    : { color: theme.colors.onSurface }
+                }
+                selectedColor="#FFFFFF"
+              >
+                Monthly
+              </Chip>
+              <Chip
+                mode={interestRateType === "yearly" ? "flat" : "outlined"}
+                selected={interestRateType === "yearly"}
+                onPress={() => setInterestRateType("yearly")}
+                style={[
+                  styles.methodChip,
+                  interestRateType === "yearly" && styles.selectedChip,
+                ]}
+                textStyle={
+                  interestRateType === "yearly"
+                    ? styles.selectedChipText
+                    : { color: theme.colors.onSurface }
+                }
+                selectedColor="#FFFFFF"
+              >
+                Yearly
+              </Chip>
+            </View>
+          </View>
 
           <View style={styles.dateContainer}>
             <Text
@@ -794,5 +846,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Roboto-Regular",
     marginTop: 8,
+  },
+  interestRateTypeContainer: {
+    marginBottom: 12,
+  },
+  methodOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 8,
+  },
+  methodChip: {
+    margin: 4,
   },
 });

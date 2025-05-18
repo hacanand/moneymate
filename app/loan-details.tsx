@@ -39,7 +39,7 @@ export default function LoanDetailsScreen() {
   const [reminderMessage, setReminderMessage] = useState<string>(
     `Hello ${
       loan?.borrowerName
-    }, this is a reminder that your loan payment of $${
+    }, this is a reminder that your loan payment of ₹${
       loan?.amount
     } is due on ${new Date(loan?.dueDate ?? "").toLocaleDateString()}.`
   );
@@ -72,7 +72,7 @@ export default function LoanDetailsScreen() {
     // In a real app, you would process the payment here
     showAlert({
       title: "Payment Recorded",
-      message: `Payment of $${paymentAmount} has been recorded via ${
+      message: `Payment of ₹${paymentAmount} has been recorded via ${
         paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)
       }.`,
     });
@@ -90,7 +90,7 @@ export default function LoanDetailsScreen() {
     setReminderModalOpen(false);
   };
 
-  // Calculate interest
+  // Calculate interest based on rate type
   const principal = loan.amount;
   const interestRate = loan.interestRate / 100;
   const loanStartDate = new Date(loan.date);
@@ -99,7 +99,15 @@ export default function LoanDetailsScreen() {
     (loanDueDate.getTime() - loanStartDate.getTime()) / (1000 * 60 * 60 * 24)
   );
   const durationInMonths = durationInDays / 30;
-  const interest = principal * interestRate * durationInMonths;
+  const durationInYears = durationInDays / 365;
+
+  // Calculate interest based on rate type (default to monthly if not specified)
+  let interest: number;
+  if (loan.interestRateType === "yearly") {
+    interest = principal * interestRate * durationInYears;
+  } else {
+    interest = principal * interestRate * durationInMonths;
+  }
   const totalAmount = principal + interest;
 
   // Calculate days remaining or overdue
@@ -184,7 +192,7 @@ export default function LoanDetailsScreen() {
             <Text
               style={[styles.detailValue, { color: theme.colors.onSurface }]}
             >
-              ${principal.toLocaleString()}
+              ₹{principal.toLocaleString()}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -199,7 +207,10 @@ export default function LoanDetailsScreen() {
             <Text
               style={[styles.detailValue, { color: theme.colors.onSurface }]}
             >
-              {loan.interestRate}%
+              {loan.interestRate}%{" "}
+              {loan.interestRateType
+                ? `(${loan.interestRateType})`
+                : "(monthly)"}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -214,7 +225,7 @@ export default function LoanDetailsScreen() {
             <Text
               style={[styles.detailValue, { color: theme.colors.onSurface }]}
             >
-              ${interest.toFixed(2)}
+              ₹{interest.toFixed(2)}
             </Text>
           </View>
           <Divider
@@ -239,7 +250,7 @@ export default function LoanDetailsScreen() {
                 { color: theme.colors.primary },
               ]}
             >
-              ${totalAmount.toFixed(2)}
+              ₹{totalAmount.toFixed(2)}
             </Text>
           </View>
         </Card.Content>
@@ -327,7 +338,7 @@ export default function LoanDetailsScreen() {
           {paymentHistory.map((payment) => (
             <List.Item
               key={payment.id}
-              title={`$${payment.amount.toLocaleString()}`}
+              title={`₹${payment.amount.toLocaleString()}`}
               description={`Method: ${payment.method}`}
               right={(props) => (
                 <Text
@@ -407,7 +418,7 @@ export default function LoanDetailsScreen() {
             style={[styles.input, { backgroundColor: theme.colors.surface }]}
             left={
               <TextInput.Affix
-                text="$"
+                text="₹"
                 textStyle={{ color: theme.colors.onSurfaceVariant }}
               />
             }

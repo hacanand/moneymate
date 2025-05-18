@@ -1,4 +1,5 @@
 export type LoanStatus = "active" | "overdue" | "paid";
+export type InterestRateType = "monthly" | "yearly";
 
 export interface Loan {
   id: string;
@@ -8,6 +9,7 @@ export interface Loan {
   dueDate: string;
   status: LoanStatus;
   interestRate: number;
+  interestRateType?: InterestRateType;
   borrowerPhone?: string;
   notes?: string;
   collateral?: string;
