@@ -1,35 +1,35 @@
 "use client";
 
-import { useState, useRef } from "react";
-import {
-  StyleSheet,
-  View,
-  FlatList,
-  TouchableOpacity,
-  Dimensions,
-  type ListRenderItem,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from "react-native";
-import {
-  Text,
-  FAB,
-  Surface,
-  Card,
-  Chip,
-  Searchbar,
-  Button,
-  TextInput,
-} from "react-native-paper";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Modal from "react-native-modalbox";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
-import type { Loan, LoanStatus } from "../../types/loan";
+import { useRef, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  type ListRenderItem,
+} from "react-native";
+import Modal from "react-native-modalbox";
+import {
+  Button,
+  Card,
+  Chip,
+  FAB,
+  Searchbar,
+  Surface,
+  Text,
+  TextInput,
+} from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
+import type { Loan, LoanStatus } from "../../types/loan";
 // Import the useCustomAlert hook
+import * as Animatable from "react-native-animatable";
+import { Path, Svg } from "react-native-svg";
 import { useCustomAlert } from "../../components/CustomAlert";
 
 // Get screen dimensions
@@ -79,13 +79,35 @@ const initialLoans: Loan[] = [
   },
 ];
 
+// Helper SVG icons
+const InterestIcon = ({ color = "#4CAF50", size = 18 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"
+      fill={color}
+    />
+  </Svg>
+);
+const CalendarIcon = ({ color = "#2196F3", size = 16 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zm0-13H5V6h14v1z"
+      fill={color}
+    />
+  </Svg>
+);
+const RupeeIcon = ({ color = "#388E3C", size = 16 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M6 6h12v2H6zm0 3h12v2H6zm0 3h7v2H6zm0 3h7v2H6z" fill={color} />
+  </Svg>
+);
+
 export default function HomeScreen() {
   const { theme } = useTheme();
   const [loans, setLoans] = useState<Loan[]>(initialLoans);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
   const [addLoanModalOpen, setAddLoanModalOpen] = useState<boolean>(false);
-  const [showPaidLoans, setShowPaidLoans] = useState<boolean>(false);
   const insets = useSafeAreaInsets();
 
   // Add loan form state
@@ -113,36 +135,17 @@ export default function HomeScreen() {
   // Modal references
   const filterModalRef = useRef<any>(null);
   const addLoanModalRef = useRef<any>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   // Add this line near the top of the component, after other hooks
   const { showAlert, AlertComponent } = useCustomAlert();
 
+  // Add state for tab selection
+  const [loanTab, setLoanTab] = useState<"active" | "paid">("active");
+
   const onChangeSearch = (query: string): void => setSearchQuery(query);
 
-  const filteredLoans = loans
-    .filter((loan) =>
-      loan.borrowerName.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .filter((loan) => statusFilter === "all" || loan.status === statusFilter);
-
-  const totalActive = loans
-    .filter((loan) => loan.status === "active")
-    .reduce((sum, loan) => sum + loan.amount, 0);
-
-  const getStatusColor = (status: LoanStatus): string => {
-    switch (status) {
-      case "active":
-        return "#4CAF50";
-      case "paid":
-        return "#2196F3";
-      default:
-        return theme.colors.onSurfaceVariant;
-    }
-  };
-
-  // First, let's add a function to calculate interest earned so far
-  // Add this function before the renderLoanItem function:
-
+  // Function to calculate interest earned for a loan
   const calculateInterestEarned = (loan: Loan): number => {
     const principal = loan.amount;
     const interestRate = loan.interestRate / 100;
@@ -172,114 +175,229 @@ export default function HomeScreen() {
     return interest;
   };
 
-  // Now, let's completely replace the renderLoanItem function with a more beautiful design:
+  // Filter loans based on search query, status filter, and showPaidLoans toggle
+  const filteredLoans = loans
+    .filter((loan) =>
+      loan.borrowerName.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .filter((loan) => {
+      if (statusFilter !== "all") {
+        return loan.status === statusFilter;
+      }
+      // If showPaidLoans is false, only show active loans
+      return loan.status === "active";
+    });
+
+  // Calculate total active loans amount
+  const totalActive = loans
+    .filter((loan) => loan.status === "active")
+    .reduce((sum, loan) => sum + loan.amount, 0);
+
+  // Calculate total interest earned on active loans
+  const totalInterest = loans
+    .filter((loan) => loan.status === "active")
+    .reduce((sum, loan) => sum + calculateInterestEarned(loan), 0);
+
+  // Count paid loans
+  const paidLoansCount = loans.filter((loan) => loan.status === "paid").length;
+
+  const getStatusColor = (status: LoanStatus): string => {
+    switch (status) {
+      case "active":
+        return "#4CAF50";
+      case "paid":
+        return "#2196F3";
+      default:
+        return theme.colors.onSurfaceVariant;
+    }
+  };
 
   const renderLoanItem: ListRenderItem<Loan> = ({ item }) => {
     const interestEarned = calculateInterestEarned(item);
-
     return (
-      <TouchableOpacity
-        onPress={() =>
-          router.push({
-            pathname: "/loan-details",
-            params: { loan: JSON.stringify(item) },
-          })
-        }
-      >
-        <Card
-          style={[styles.loanCard, { backgroundColor: theme.colors.surface }]}
-          mode="elevated"
+      <Animatable.View animation="fadeInUp" duration={500} useNativeDriver>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() =>
+            router.push({
+              pathname: "/loan-details",
+              params: { loan: JSON.stringify(item) },
+            })
+          }
+          style={{ borderRadius: 12 }}
         >
-          <Card.Content>
-            <View style={styles.cardHeader}>
-              <View style={styles.nameStatusContainer}>
-                <Text
-                  style={[
-                    styles.borrowerName,
-                    { color: theme.colors.onSurface },
-                  ]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {item.borrowerName}
-                </Text>
-                <Chip
-                  mode="flat"
-                  textStyle={{
-                    color: "#FFFFFF",
-                    fontFamily: "Roboto-Medium",
-                    fontSize: 12,
-                  }}
-                  style={{
-                    backgroundColor: getStatusColor(item.status),
-                    height: 32,
-                    paddingHorizontal: 8,
-                  }}
-                  compact
-                >
-                  {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                </Chip>
-              </View>
-            </View>
+          <Animatable.View
+            animation="pulse"
+            duration={300}
+            iterationCount={1}
+            style={{ borderRadius: 12 }}
+          >
+            <Card
+              style={[
+                styles.loanCard,
+                { backgroundColor: theme.colors.surface },
+                item.status === "paid" && { opacity: 0.7 },
+              ]}
+              mode="elevated"
+            >
+              <Card.Content>
+                {/* Header: Name & Status */}
+                <View style={styles.cardHeaderRow}>
+                  <Text
+                    style={[
+                      styles.borrowerName,
+                      { color: theme.colors.onSurface },
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {item.borrowerName}
+                  </Text>
+                  <Chip
+                    mode="flat"
+                    textStyle={styles.statusChipText}
+                    style={[
+                      styles.statusChip,
+                      { backgroundColor: getStatusColor(item.status) },
+                    ]}
+                    compact
+                    accessibilityLabel={
+                      item.status === "paid" ? "Paid loan" : "Active loan"
+                    }
+                  >
+                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                  </Chip>
+                </View>
 
-            <View style={styles.amountContainer}>
-              <Text
-                style={[styles.loanAmount, { color: theme.colors.primary }]}
-              >
-                ₹{item.amount.toLocaleString()}
-              </Text>
-              <Text
-                style={[
-                  styles.loanDate,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                {new Date(item.date).toLocaleDateString()}
-              </Text>
-            </View>
+                {/* Amount & Date Row */}
+                <View style={styles.cardAmountDateRow}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <RupeeIcon color={theme.colors.primary} size={16} />
+                    <Text
+                      style={[
+                        styles.loanAmount,
+                        { color: theme.colors.primary, marginLeft: 4 },
+                      ]}
+                    >
+                      {item.amount.toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <CalendarIcon
+                      color={theme.colors.onSurfaceVariant}
+                      size={16}
+                    />
+                    <Text
+                      style={[
+                        styles.loanDate,
+                        { color: theme.colors.onSurfaceVariant, marginLeft: 4 },
+                      ]}
+                    >
+                      {new Date(item.date).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
 
-            <View style={styles.divider} />
+                <View style={styles.divider} />
 
-            <View style={styles.detailsGrid}>
-              <View style={styles.detailItem}>
-                <Text
-                  style={[
-                    styles.detailLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Interest Rate
-                </Text>
-                <Text
-                  style={[
-                    styles.detailValue,
-                    { color: theme.colors.onSurface },
-                  ]}
-                >
-                  {item.interestRate}%{" "}
-                  {item.interestRateType === "yearly"
-                    ? "(yearly)"
-                    : "(monthly)"}
-                </Text>
-              </View>
-
-              <View style={styles.detailItem}>
-                <Text
-                  style={[
-                    styles.detailLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Interest Earned
-                </Text>
-                <Text style={[styles.detailValue, { color: "#4CAF50" }]}>
-                  ₹{interestEarned.toFixed(2)}
-                </Text>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
-      </TouchableOpacity>
+                {/* Details Grid: Interest Rate & Interest Earned */}
+                <View style={styles.cardDetailsGrid}>
+                  <View style={styles.cardDetailCol}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <InterestIcon color={theme.colors.primary} size={16} />
+                      <Text
+                        style={[
+                          styles.detailLabel,
+                          {
+                            color: theme.colors.onSurfaceVariant,
+                            marginLeft: 6,
+                          },
+                        ]}
+                      >
+                        Interest Rate
+                      </Text>
+                    </View>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "flex-end" }}
+                    >
+                      <Text
+                        style={[
+                          styles.detailValue,
+                          { color: theme.colors.onSurface },
+                        ]}
+                      >
+                        {item.interestRate}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.detailUnit,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        %
+                      </Text>
+                      <Text
+                        style={[
+                          styles.detailUnit,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        {item.interestRateType === "yearly" ? "/yr" : "/mo"}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.cardDetailColRight}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        marginBottom: 4,
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <InterestIcon color={theme.colors.primary} size={16} />
+                      <Text
+                        style={[
+                          styles.detailLabel,
+                          {
+                            color: theme.colors.onSurfaceVariant,
+                            marginLeft: 6,
+                            textAlign: "right",
+                          },
+                        ]}
+                      >
+                        Interest Earned
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-end",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.detailValue,
+                          { color: theme.colors.primary },
+                        ]}
+                      >
+                        ₹{interestEarned.toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </Card.Content>
+            </Card>
+          </Animatable.View>
+        </TouchableOpacity>
+      </Animatable.View>
     );
   };
 
@@ -369,57 +487,170 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.summaryContainer}>
-        <Surface
-          style={[
-            styles.summaryCard,
-            { backgroundColor: theme.colors.surface },
-          ]}
-        >
-          <Text
+        <View style={styles.summaryRow}>
+          <Surface
             style={[
-              styles.summaryTitle,
-              { color: theme.colors.onSurfaceVariant },
+              styles.summaryCard,
+              {
+                backgroundColor: theme.colors.surface,
+                flex: 1,
+                marginRight: 8,
+              },
             ]}
           >
-            Total Active Loans
-          </Text>
-          <Text style={[styles.summaryAmount, { color: theme.colors.primary }]}>
-            ₹{totalActive.toLocaleString()}
-          </Text>
-        </Surface>
+            <Text
+              style={[
+                styles.summaryTitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Total Active Loans
+            </Text>
+            <Text
+              style={[styles.summaryAmount, { color: theme.colors.primary }]}
+            >
+              ₹{totalActive.toLocaleString()}
+            </Text>
+          </Surface>
+
+          <Surface
+            style={[
+              styles.summaryCard,
+              { backgroundColor: theme.colors.surface, flex: 1, marginLeft: 8 },
+            ]}
+          >
+            <Text
+              style={[
+                styles.summaryTitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Total Interest
+            </Text>
+            <Text style={[styles.summaryAmount, { color: "#4CAF50" }]}>
+              ₹{totalInterest.toFixed(2)}
+            </Text>
+          </Surface>
+        </View>
       </View>
 
-      <FlatList
-        data={filteredLoans}
-        renderItem={renderLoanItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.loansList}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons
-              name="cash-remove"
-              size={64}
-              color={theme.colors.onSurfaceVariant}
-            />
-            <Text
-              style={[
-                styles.emptyText,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              No loans found
-            </Text>
-            <Text
-              style={[
-                styles.emptySubtext,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Add a new loan to get started
-            </Text>
-          </View>
-        }
-      />
+      {/* Loan type chips */}
+      <View style={styles.loanTabChipsContainer}>
+        <Chip
+          mode={loanTab === "active" ? "flat" : "outlined"}
+          selected={loanTab === "active"}
+          onPress={() => {
+            setLoanTab("active");
+            scrollRef.current?.scrollTo({ x: 0, animated: true });
+          }}
+          style={[
+            styles.loanTabChip,
+            loanTab === "active" && styles.selectedLoanTabChip,
+          ]}
+          textStyle={
+            loanTab === "active"
+              ? styles.selectedChipText
+              : { color: theme.colors.onSurface }
+          }
+        >
+          Active Loans
+        </Chip>
+        <Chip
+          mode={loanTab === "paid" ? "flat" : "outlined"}
+          selected={loanTab === "paid"}
+          onPress={() => {
+            setLoanTab("paid");
+            scrollRef.current?.scrollTo({
+              x: Dimensions.get("window").width,
+              animated: true,
+            });
+          }}
+          style={[
+            styles.loanTabChip,
+            loanTab === "paid" && styles.selectedLoanTabChip,
+          ]}
+          textStyle={
+            loanTab === "paid"
+              ? styles.selectedChipText
+              : { color: theme.colors.onSurface }
+          }
+        >
+          Paid Loans
+        </Chip>
+      </View>
+
+      {/* Loan list with swipeable pages */}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) => {
+          const page = Math.round(
+            e.nativeEvent.contentOffset.x /
+              e.nativeEvent.layoutMeasurement.width
+          );
+          setLoanTab(page === 0 ? "active" : "paid");
+        }}
+        contentOffset={{
+          x: loanTab === "active" ? 0 : Dimensions.get("window").width,
+          y: 0,
+        }}
+        style={{ flex: 1 }}
+      >
+        {/* Active Loans Page */}
+        <View style={{ width: Dimensions.get("window").width }}>
+          <FlatList
+            data={loans.filter((loan) => loan.status === "active")}
+            renderItem={renderLoanItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.loansList}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons
+                  name="cash-remove"
+                  size={64}
+                  color={theme.colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.emptyText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  No active loans
+                </Text>
+              </View>
+            }
+          />
+        </View>
+        {/* Paid Loans Page */}
+        <View style={{ width: Dimensions.get("window").width }}>
+          <FlatList
+            data={loans.filter((loan) => loan.status === "paid")}
+            renderItem={renderLoanItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.loansList}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons
+                  name="cash-check"
+                  size={64}
+                  color={theme.colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.emptyText,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  No paid loans
+                </Text>
+              </View>
+            }
+          />
+        </View>
+      </ScrollView>
 
       <FAB
         style={[
@@ -548,206 +779,204 @@ export default function HomeScreen() {
         backdropPressToClose
         swipeToClose
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-        >
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
+        <View style={styles.modalHeader}>
+          <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
+            Add New Loan
+          </Text>
+          <TouchableOpacity onPress={() => setAddLoanModalOpen(false)}>
+            <MaterialCommunityIcons
+              name="close"
+              size={24}
+              color={theme.colors.onSurfaceVariant}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.addLoanForm}>
+          <TextInput
+            label="Borrower Name *"
+            value={borrowerName}
+            onChangeText={setBorrowerName}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            textColor={theme.colors.onSurface}
+          />
+
+          <TextInput
+            label="Phone Number"
+            value={borrowerPhone}
+            onChangeText={setBorrowerPhone}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            keyboardType="phone-pad"
+            textColor={theme.colors.onSurface}
+          />
+
+          <TextInput
+            label="Loan Amount *"
+            value={amount}
+            onChangeText={setAmount}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            keyboardType="numeric"
+            left={
+              <TextInput.Affix
+                text="₹"
+                textStyle={{ color: theme.colors.onSurfaceVariant }}
+              />
+            }
+            textColor={theme.colors.onSurface}
+          />
+
+          <TextInput
+            label="Interest Rate *"
+            value={interestRate}
+            onChangeText={setInterestRate}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            keyboardType="numeric"
+            right={
+              <TextInput.Affix
+                text="%"
+                textStyle={{ color: theme.colors.onSurfaceVariant }}
+              />
+            }
+            textColor={theme.colors.onSurface}
+          />
+
+          <View style={styles.interestRateTypeContainer}>
+            <Text
+              style={[
+                styles.dateLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Interest Rate Type
+            </Text>
+            <View style={styles.methodOptions}>
+              <Chip
+                mode={interestRateType === "monthly" ? "flat" : "outlined"}
+                selected={interestRateType === "monthly"}
+                onPress={() => setInterestRateType("monthly")}
+                style={[
+                  styles.methodChip,
+                  interestRateType === "monthly" && styles.selectedChip,
+                ]}
+                textStyle={
+                  interestRateType === "monthly"
+                    ? styles.selectedChipText
+                    : { color: theme.colors.onSurface }
+                }
+                selectedColor="#FFFFFF"
+              >
+                Monthly
+              </Chip>
+              <Chip
+                mode={interestRateType === "yearly" ? "flat" : "outlined"}
+                selected={interestRateType === "yearly"}
+                onPress={() => setInterestRateType("yearly")}
+                style={[
+                  styles.methodChip,
+                  interestRateType === "yearly" && styles.selectedChip,
+                ]}
+                textStyle={
+                  interestRateType === "yearly"
+                    ? styles.selectedChipText
+                    : { color: theme.colors.onSurface }
+                }
+                selectedColor="#FFFFFF"
+              >
+                Yearly
+              </Chip>
+            </View>
+          </View>
+
+          <View style={styles.dateContainer}>
+            <Text
+              style={[
+                styles.dateLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Start Date
+            </Text>
+            <Button
+              mode="outlined"
+              onPress={() => setShowStartDatePicker(true)}
+              style={styles.dateButton}
+              textColor={theme.colors.primary}
+            >
+              {startDate.toLocaleDateString()}
+            </Button>
+            {showStartDatePicker && (
+              <DateTimePicker
+                value={startDate}
+                mode="date"
+                display="default"
+                onChange={onChangeStartDate}
+                themeVariant={theme.dark ? "dark" : "light"}
+              />
+            )}
+          </View>
+
+          <View style={styles.dateContainer}>
+            <Text
+              style={[
+                styles.dateLabel,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Due Date
+            </Text>
+            <Button
+              mode="outlined"
+              onPress={() => setShowDueDatePicker(true)}
+              style={styles.dateButton}
+              textColor={theme.colors.primary}
+            >
+              {dueDate.toLocaleDateString()}
+            </Button>
+            {showDueDatePicker && (
+              <DateTimePicker
+                value={dueDate}
+                mode="date"
+                display="default"
+                onChange={onChangeDueDate}
+                themeVariant={theme.dark ? "dark" : "light"}
+              />
+            )}
+          </View>
+
+          <TextInput
+            label="Notes"
+            value={notes}
+            onChangeText={setNotes}
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            multiline
+            numberOfLines={3}
+            textColor={theme.colors.onSurface}
+          />
+        </View>
+
+        <View style={styles.modalActions}>
+          <Button
+            mode="outlined"
+            onPress={() => setAddLoanModalOpen(false)}
+            style={styles.cancelButton}
+            textColor={theme.colors.primary}
           >
-            <View style={styles.modalHeader}>
-              <Text
-                style={[styles.modalTitle, { color: theme.colors.onSurface }]}
-              >
-                Add New Loan
-              </Text>
-              <TouchableOpacity onPress={() => setAddLoanModalOpen(false)}>
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={theme.colors.onSurfaceVariant}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.addLoanForm}>
-              <TextInput
-                label="Borrower Name *"
-                value={borrowerName}
-                onChangeText={setBorrowerName}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                textColor={theme.colors.onSurface}
-              />
-
-              <TextInput
-                label="Phone Number"
-                value={borrowerPhone}
-                onChangeText={setBorrowerPhone}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                keyboardType="phone-pad"
-                textColor={theme.colors.onSurface}
-              />
-
-              <TextInput
-                label="Loan Amount *"
-                value={amount}
-                onChangeText={setAmount}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                keyboardType="numeric"
-                left={
-                  <TextInput.Affix
-                    text="₹"
-                    textStyle={{ color: theme.colors.onSurfaceVariant }}
-                  />
-                }
-                textColor={theme.colors.onSurface}
-              />
-
-              <TextInput
-                label="Interest Rate *"
-                value={interestRate}
-                onChangeText={setInterestRate}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                keyboardType="numeric"
-                right={
-                  <TextInput.Affix
-                    text="%"
-                    textStyle={{ color: theme.colors.onSurfaceVariant }}
-                  />
-                }
-                textColor={theme.colors.onSurface}
-              />
-
-              <View style={styles.interestRateTypeContainer}>
-                <Text
-                  style={[
-                    styles.dateLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Interest Rate Type
-                </Text>
-                <View style={styles.methodOptions}>
-                  <Chip
-                    mode={interestRateType === "monthly" ? "flat" : "outlined"}
-                    selected={interestRateType === "monthly"}
-                    onPress={() => setInterestRateType("monthly")}
-                    style={[
-                      styles.methodChip,
-                      interestRateType === "monthly" && styles.selectedChip,
-                    ]}
-                    textStyle={
-                      interestRateType === "monthly"
-                        ? styles.selectedChipText
-                        : { color: theme.colors.onSurface }
-                    }
-                    selectedColor="#FFFFFF"
-                  >
-                    Monthly
-                  </Chip>
-                  <Chip
-                    mode={interestRateType === "yearly" ? "flat" : "outlined"}
-                    selected={interestRateType === "yearly"}
-                    onPress={() => setInterestRateType("yearly")}
-                    style={[
-                      styles.methodChip,
-                      interestRateType === "yearly" && styles.selectedChip,
-                    ]}
-                    textStyle={
-                      interestRateType === "yearly"
-                        ? styles.selectedChipText
-                        : { color: theme.colors.onSurface }
-                    }
-                    selectedColor="#FFFFFF"
-                  >
-                    Yearly
-                  </Chip>
-                </View>
-              </View>
-
-              <View style={styles.dateContainer}>
-                <Text
-                  style={[
-                    styles.dateLabel,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  Start Date
-                </Text>
-                <Button
-                  mode="outlined"
-                  onPress={() => setShowStartDatePicker(true)}
-                  style={styles.dateButton}
-                  textColor={theme.colors.primary}
-                >
-                  {startDate.toLocaleDateString()}
-                </Button>
-                {showStartDatePicker && (
-                  <DateTimePicker
-                    value={startDate}
-                    mode="date"
-                    display={Platform.OS === "ios" ? "inline" : "calendar"}
-                    onChange={onChangeStartDate}
-                    themeVariant={theme.dark ? "dark" : "light"}
-                    textColor={theme.dark ? "#fff" : undefined}
-                    accentColor={theme.colors.primary}
-                    style={{ backgroundColor: theme.dark ? "#222" : "#fff" }}
-                  />
-                )}
-              </View>
-
-              <TextInput
-                label="Notes"
-                value={notes}
-                onChangeText={setNotes}
-                mode="outlined"
-                style={[
-                  styles.input,
-                  { backgroundColor: theme.colors.surface },
-                ]}
-                multiline
-                numberOfLines={3}
-                textColor={theme.colors.onSurface}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <Button
-                mode="outlined"
-                onPress={() => setAddLoanModalOpen(false)}
-                style={styles.cancelButton}
-                textColor={theme.colors.primary}
-              >
-                Cancel
-              </Button>
-              <Button
-                mode="contained"
-                onPress={handleAddLoan}
-                style={styles.saveButton}
-                labelStyle={styles.buttonLabel}
-              >
-                Save Loan
-              </Button>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+            Cancel
+          </Button>
+          <Button
+            mode="contained"
+            onPress={handleAddLoan}
+            style={styles.saveButton}
+            labelStyle={styles.buttonLabel}
+          >
+            Save Loan
+          </Button>
+        </View>
       </Modal>
 
       {/* Render the AlertComponent */}
@@ -774,7 +1003,13 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   summaryContainer: {
-    padding: 16,
+    paddingHorizontal: 8,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   summaryCard: {
     padding: 16,
@@ -790,56 +1025,69 @@ const styles = StyleSheet.create({
     fontFamily: "Roboto-Bold",
   },
   loansList: {
-    padding: 16,
-    paddingBottom: 80, // Extra padding for FAB
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 80,
   },
   loanCard: {
     marginBottom: 16,
     borderRadius: 12,
     elevation: 3,
   },
-  cardHeader: {
-    marginBottom: 12,
-  },
-  nameStatusContainer: {
+  cardHeaderRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    width: "100%",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    gap: 8,
   },
-  borrowerName: {
-    fontSize: 18,
-    fontFamily: "Roboto-Bold",
-    flex: 1,
-    marginRight: 8,
+  statusChip: {
+    height: 24,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  amountContainer: {
+  statusChipText: {
+    color: "#FFFFFF",
+    fontFamily: "Roboto-Medium",
+    fontSize: 12,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+  },
+  cardAmountDateRow: {
     flexDirection: "row",
+    alignItems: "flex-end",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 0,
+    marginBottom: 8,
     marginTop: 0,
-  },
-  loanAmount: {
-    fontSize: 24,
-    fontFamily: "Roboto-Bold",
-  },
-  loanDate: {
-    fontSize: 14,
-    fontFamily: "Roboto-Regular",
   },
   divider: {
     height: 1,
     backgroundColor: "rgba(0,0,0,0.1)",
     marginVertical: 12,
   },
-  detailsGrid: {
+  cardDetailsGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4,
+    alignItems: "center",
+    marginTop: 0,
+    gap: 8,
+    minHeight: 48,
   },
-  detailItem: {
-    paddingRight: 8,
+  cardDetailCol: {
+    flex: 1,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    minWidth: 0,
+    minHeight: 48,
+  },
+  cardDetailColRight: {
+    flex: 1,
+    alignItems: "flex-end",
+    justifyContent: "center",
+    minWidth: 0,
+    minHeight: 48,
   },
   detailLabel: {
     fontSize: 12,
@@ -849,6 +1097,12 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 16,
     fontFamily: "Roboto-Medium",
+  },
+  detailUnit: {
+    fontSize: 12,
+    fontFamily: "Roboto-Regular",
+    color: "#888",
+    marginLeft: 2,
   },
   loanHeader: {
     flexDirection: "row",
@@ -880,10 +1134,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   addLoanModal: {
-    minWidth: 320,
-    maxWidth: SCREEN_WIDTH - 24,
-    minHeight: 200,
-    maxHeight: "90%",
+    height: 550,
+    width: SCREEN_WIDTH - 40,
     borderRadius: 20,
     padding: 20,
   },
@@ -909,14 +1161,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
   },
-  statusChip: {
-    margin: 4,
-  },
   selectedChip: {
     backgroundColor: "#2E7D32",
-  },
-  selectedChipText: {
-    color: "white",
   },
   modalActions: {
     flexDirection: "row",
@@ -986,5 +1232,42 @@ const styles = StyleSheet.create({
   methodChip: {
     margin: 4,
   },
+  loanTabChipsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingHorizontal: 8,
+    gap: 8,
+  },
+  loanTabChip: {
+    marginHorizontal: 4,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  selectedLoanTabChip: {
+    backgroundColor: "#2E7D32",
+  },
+  borrowerName: {
+    fontSize: 18,
+    fontFamily: "Roboto-Bold",
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  loanAmount: {
+    fontSize: 18,
+    fontFamily: "Roboto-Bold",
+    marginRight: 8,
+  },
+  loanDate: {
+    fontSize: 14,
+    fontFamily: "Roboto-Regular",
+    alignSelf: "flex-end",
+  },
+  selectedChipText: {
+    color: "#FFFFFF",
+    fontFamily: "Roboto-Medium",
+    fontSize: 14,
+  },
 });
-  
