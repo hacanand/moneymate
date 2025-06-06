@@ -173,6 +173,13 @@ function AppContent({
               }}
             >
               <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="add-loan"
+                options={{
+                  title: "Add Loan",
+                  animation: "slide_from_right",
+                }}
+              />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="loan-details"

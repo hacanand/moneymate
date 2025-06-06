@@ -1,36 +1,25 @@
 "use client";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
   type ListRenderItem,
 } from "react-native";
-import Modal from "react-native-modalbox";
-import {
-  Button,
-  Card,
-  Chip,
-  FAB,
-  Searchbar,
-  Surface,
-  Text,
-  TextInput,
-} from "react-native-paper";
+import { Button, FAB, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../../context/ThemeContext";
-import type { Loan, LoanStatus } from "../../types/loan";
-// Import the useCustomAlert hook
-import * as Animatable from "react-native-animatable";
-import { Path, Svg } from "react-native-svg";
 import { useCustomAlert } from "../../components/CustomAlert";
+import { LoanCard } from "../../components/LoanCard";
+import { LoanFilterModal } from "../../components/LoanFilterModal";
+import { LoanTabs } from "../../components/LoanTabs";
+import { SummaryCards } from "../../components/SummaryCards";
+import type { Loan, LoanStatus } from "../../types/loan";
+import Svg, { Path } from "react-native-svg";
 
 // Get screen dimensions
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -102,48 +91,22 @@ const RupeeIcon = ({ color = "#388E3C", size = 16 }) => (
   </Svg>
 );
 
-export default function HomeScreen() {
-  const { theme } = useTheme();
+export default function LoanListPage() {
+  const theme = useTheme();
+  const router = useRouter();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const insets = useSafeAreaInsets();
   const [loans, setLoans] = useState<Loan[]>(initialLoans);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
-  const [addLoanModalOpen, setAddLoanModalOpen] = useState<boolean>(false);
-  const insets = useSafeAreaInsets();
-
-  // Add loan form state
-  const [borrowerName, setBorrowerName] = useState<string>("");
-  const [borrowerPhone, setBorrowerPhone] = useState<string>("");
-  const [amount, setAmount] = useState<string>("");
-  const [interestRate, setInterestRate] = useState<string>("");
-  const [startDate, setStartDate] = useState<Date>(new Date());
-  const [dueDate, setDueDate] = useState<Date>(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-  ); // 30 days from now
-  const [notes, setNotes] = useState<string>("");
-  const [showStartDatePicker, setShowStartDatePicker] =
-    useState<boolean>(false);
-  const [showDueDatePicker, setShowDueDatePicker] = useState<boolean>(false);
-  const [collateralRequired, setCollateralRequired] = useState<boolean>(false);
-  const [collateralDetails, setCollateralDetails] = useState<string>("");
-  const [interestRateType, setInterestRateType] = useState<
-    "monthly" | "yearly"
-  >("monthly");
+  const [loanTab, setLoanTab] = useState<"active" | "paid">("active");
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<"all" | LoanStatus>("all");
 
   // Modal references
   const filterModalRef = useRef<any>(null);
-  const addLoanModalRef = useRef<any>(null);
   const scrollRef = useRef<ScrollView>(null);
-
-  // Add this line near the top of the component, after other hooks
-  const { showAlert, AlertComponent } = useCustomAlert();
-
-  // Add state for tab selection
-  const [loanTab, setLoanTab] = useState<"active" | "paid">("active");
-
-  const onChangeSearch = (query: string): void => setSearchQuery(query);
 
   // Function to calculate interest earned for a loan
   const calculateInterestEarned = (loan: Loan): number => {
@@ -212,372 +175,38 @@ export default function HomeScreen() {
     }
   };
 
-  const renderLoanItem: ListRenderItem<Loan> = ({ item }) => {
-    const interestEarned = calculateInterestEarned(item);
-    return (
-      <Animatable.View animation="fadeInUp" duration={500} useNativeDriver>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() =>
-            router.push({
-              pathname: "/loan-details",
-              params: { loan: JSON.stringify(item) },
-            })
-          }
-          style={{ borderRadius: 12 }}
-        >
-          <Animatable.View
-            animation="pulse"
-            duration={300}
-            iterationCount={1}
-            style={{ borderRadius: 12 }}
-          >
-            <Card
-              style={[
-                styles.loanCard,
-                { backgroundColor: theme.colors.surface },
-                item.status === "paid" && { opacity: 0.7 },
-              ]}
-              mode="elevated"
-            >
-              <Card.Content>
-                {/* Header: Name & Status */}
-                <View style={styles.cardHeaderRow}>
-                  <Text
-                    style={[
-                      styles.borrowerName,
-                      { color: theme.colors.onSurface },
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {item.borrowerName}
-                  </Text>
-                  <Chip
-                    mode="flat"
-                    textStyle={styles.statusChipText}
-                    style={[
-                      styles.statusChip,
-                      { backgroundColor: getStatusColor(item.status) },
-                    ]}
-                    compact
-                    accessibilityLabel={
-                      item.status === "paid" ? "Paid loan" : "Active loan"
-                    }
-                  >
-                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                  </Chip>
-                </View>
+  const renderLoanItem: ListRenderItem<Loan> = ({ item }) => (
+    <LoanCard
+      loan={item}
+      onPress={() =>
+        router.push({
+          pathname: "/loan-details",
+          params: { loan: JSON.stringify(item) },
+        })
+      }
+      calculateInterestEarned={calculateInterestEarned}
+      getStatusColor={getStatusColor}
+      theme={theme}
+    />
+  );
 
-                {/* Amount & Date Row */}
-                <View style={styles.cardAmountDateRow}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <RupeeIcon color={theme.colors.primary} size={16} />
-                    <Text
-                      style={[
-                        styles.loanAmount,
-                        { color: theme.colors.primary, marginLeft: 4 },
-                      ]}
-                    >
-                      {item.amount.toLocaleString()}
-                    </Text>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <CalendarIcon
-                      color={theme.colors.onSurfaceVariant}
-                      size={16}
-                    />
-                    <Text
-                      style={[
-                        styles.loanDate,
-                        { color: theme.colors.onSurfaceVariant, marginLeft: 4 },
-                      ]}
-                    >
-                      {new Date(item.date).toLocaleDateString()}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.divider} />
-
-                {/* Details Grid: Interest Rate & Interest Earned */}
-                <View style={styles.cardDetailsGrid}>
-                  <View style={styles.cardDetailCol}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginBottom: 4,
-                      }}
-                    >
-                      <InterestIcon color={theme.colors.primary} size={16} />
-                      <Text
-                        style={[
-                          styles.detailLabel,
-                          {
-                            color: theme.colors.onSurfaceVariant,
-                            marginLeft: 6,
-                          },
-                        ]}
-                      >
-                        Interest Rate
-                      </Text>
-                    </View>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "flex-end" }}
-                    >
-                      <Text
-                        style={[
-                          styles.detailValue,
-                          { color: theme.colors.onSurface },
-                        ]}
-                      >
-                        {item.interestRate}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.detailUnit,
-                          { color: theme.colors.onSurfaceVariant },
-                        ]}
-                      >
-                        %
-                      </Text>
-                      <Text
-                        style={[
-                          styles.detailUnit,
-                          { color: theme.colors.onSurfaceVariant },
-                        ]}
-                      >
-                        {item.interestRateType === "yearly" ? "/yr" : "/mo"}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.cardDetailColRight}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginBottom: 4,
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      <InterestIcon color={theme.colors.primary} size={16} />
-                      <Text
-                        style={[
-                          styles.detailLabel,
-                          {
-                            color: theme.colors.onSurfaceVariant,
-                            marginLeft: 6,
-                            textAlign: "right",
-                          },
-                        ]}
-                      >
-                        Interest Earned
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "flex-end",
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.detailValue,
-                          { color: theme.colors.primary },
-                        ]}
-                      >
-                        ₹{interestEarned.toFixed(2)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </Card.Content>
-            </Card>
-          </Animatable.View>
-        </TouchableOpacity>
-      </Animatable.View>
-    );
-  };
-
-  const onChangeStartDate = (event: any, selectedDate?: Date): void => {
-    const currentDate = selectedDate || startDate;
-    setShowStartDatePicker(false);
-    setStartDate(currentDate);
-  };
-
-  const onChangeDueDate = (event: any, selectedDate?: Date): void => {
-    const currentDate = selectedDate || dueDate;
-    setShowDueDatePicker(false);
-    setDueDate(currentDate);
-  };
-
-  // Update the handleAddLoan function
-  const handleAddLoan = (): void => {
-    // Validate form
-    if (!borrowerName || !amount || !interestRate) {
-      showAlert({
-        title: "Missing Information",
-        message: "Please fill in all required fields",
-      });
-      return;
-    }
-
-    // Create new loan
-    const newLoan: Loan = {
-      id: (loans.length + 1).toString(),
-      borrowerName,
-      amount: Number.parseFloat(amount),
-      date: startDate.toISOString().split("T")[0],
-      dueDate: dueDate.toISOString().split("T")[0],
-      status: "active",
-      interestRate: Number.parseFloat(interestRate),
-      interestRateType: interestRateType,
-      borrowerPhone,
-      notes,
-      collateral: collateralRequired ? collateralDetails : undefined,
-    };
-
-    // Add to loans
-    setLoans([newLoan, ...loans]);
-
-    // Reset form and close modal
-    resetForm();
-    setAddLoanModalOpen(false);
-  };
-
-  const resetForm = (): void => {
-    setBorrowerName("");
-    setBorrowerPhone("");
-    setAmount("");
-    setInterestRate("");
-    setInterestRateType("monthly");
-    setStartDate(new Date());
-    setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
-    setNotes("");
-    setCollateralRequired(false);
-    setCollateralDetails("");
-  };
+  const onChangeSearch = (query: string): void => setSearchQuery(query);
 
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <View style={styles.searchContainer}>
-        <Searchbar
-          placeholder="Search borrowers"
-          onChangeText={onChangeSearch}
-          value={searchQuery}
-          style={[styles.searchbar, { backgroundColor: theme.colors.surface }]}
-          iconColor={theme.colors.onSurfaceVariant}
-          inputStyle={{ color: theme.colors.onSurface }}
-          placeholderTextColor={theme.colors.onSurfaceVariant}
-        />
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setFilterModalOpen(true)}
-        >
-          <MaterialCommunityIcons
-            name="filter-variant"
-            size={24}
-            color={theme.colors.primary}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.summaryContainer}>
-        <View style={styles.summaryRow}>
-          <Surface
-            style={[
-              styles.summaryCard,
-              {
-                backgroundColor: theme.colors.surface,
-                flex: 1,
-                marginRight: 8,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.summaryTitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Total Active Loans
-            </Text>
-            <Text
-              style={[styles.summaryAmount, { color: theme.colors.primary }]}
-            >
-              ₹{totalActive.toLocaleString()}
-            </Text>
-          </Surface>
-
-          <Surface
-            style={[
-              styles.summaryCard,
-              { backgroundColor: theme.colors.surface, flex: 1, marginLeft: 8 },
-            ]}
-          >
-            <Text
-              style={[
-                styles.summaryTitle,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Total Interest
-            </Text>
-            <Text style={[styles.summaryAmount, { color: "#4CAF50" }]}>
-              ₹{totalInterest.toFixed(2)}
-            </Text>
-          </Surface>
-        </View>
-      </View>
-
-      {/* Loan type chips */}
-      <View style={styles.loanTabChipsContainer}>
-        <Chip
-          mode={loanTab === "active" ? "flat" : "outlined"}
-          selected={loanTab === "active"}
-          onPress={() => {
-            setLoanTab("active");
-            scrollRef.current?.scrollTo({ x: 0, animated: true });
-          }}
-          style={[
-            styles.loanTabChip,
-            loanTab === "active" && styles.selectedLoanTabChip,
-          ]}
-          textStyle={
-            loanTab === "active"
-              ? styles.selectedChipText
-              : { color: theme.colors.onSurface }
-          }
-        >
-          Active Loans
-        </Chip>
-        <Chip
-          mode={loanTab === "paid" ? "flat" : "outlined"}
-          selected={loanTab === "paid"}
-          onPress={() => {
-            setLoanTab("paid");
-            scrollRef.current?.scrollTo({
-              x: Dimensions.get("window").width,
-              animated: true,
-            });
-          }}
-          style={[
-            styles.loanTabChip,
-            loanTab === "paid" && styles.selectedLoanTabChip,
-          ]}
-          textStyle={
-            loanTab === "paid"
-              ? styles.selectedChipText
-              : { color: theme.colors.onSurface }
-          }
-        >
-          Paid Loans
-        </Chip>
-      </View>
+      <SummaryCards
+        totalActive={totalActive}
+        totalInterest={totalInterest}
+        theme={theme}
+      />
+      <LoanTabs
+        loanTab={loanTab}
+        setLoanTab={setLoanTab}
+        scrollRef={scrollRef}
+        theme={theme}
+      />
 
       {/* Loan list with swipeable pages */}
       <ScrollView
@@ -652,334 +281,15 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      <FAB
-        style={[
-          styles.fab,
-          {
-            bottom: insets.bottom > 0 ? insets.bottom : 16,
-            backgroundColor: theme.colors.primary,
-          },
-        ]}
-        icon="plus"
-        onPress={() => setAddLoanModalOpen(true)}
-        color="#FFFFFF"
-      />
-
-      {/* Filter Modal */}
-      <Modal
-        ref={filterModalRef}
-        style={[styles.modal, { backgroundColor: theme.colors.surface }]}
-        position="bottom"
-        isOpen={filterModalOpen}
-        onClosed={() => setFilterModalOpen(false)}
-        swipeToClose
-        backdropPressToClose
-        entry="bottom"
+      <Button
+        mode="contained"
+        onPress={() => router.push("/add-loan")}
+        style={{ margin: 16 }}
       >
-        <View style={styles.modalHeader}>
-          <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-            Filter Loans
-          </Text>
-          <TouchableOpacity onPress={() => setFilterModalOpen(false)}>
-            <MaterialCommunityIcons
-              name="close"
-              size={24}
-              color={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-        </View>
+        Add New Loan
+      </Button>
 
-        <View style={styles.filterOptions}>
-          <Text style={[styles.filterLabel, { color: theme.colors.onSurface }]}>
-            Status
-          </Text>
-          {/* Find the statusButtons View in the Filter Modal and replace it with: */}
-          <View style={styles.statusButtons}>
-            <Chip
-              mode={statusFilter === "all" ? "flat" : "outlined"}
-              selected={statusFilter === "all"}
-              onPress={() => setStatusFilter("all")}
-              style={[
-                styles.statusChip,
-                statusFilter === "all" && styles.selectedChip,
-              ]}
-              textStyle={
-                statusFilter === "all"
-                  ? styles.selectedChipText
-                  : { color: theme.colors.onSurface }
-              }
-              selectedColor="#FFFFFF"
-            >
-              All
-            </Chip>
-            <Chip
-              mode={statusFilter === "active" ? "flat" : "outlined"}
-              selected={statusFilter === "active"}
-              onPress={() => setStatusFilter("active")}
-              style={[
-                styles.statusChip,
-                statusFilter === "active" && styles.selectedChip,
-              ]}
-              textStyle={
-                statusFilter === "active"
-                  ? styles.selectedChipText
-                  : { color: theme.colors.onSurface }
-              }
-              selectedColor="#FFFFFF"
-            >
-              Active
-            </Chip>
-            <Chip
-              mode={statusFilter === "paid" ? "flat" : "outlined"}
-              selected={statusFilter === "paid"}
-              onPress={() => setStatusFilter("paid")}
-              style={[
-                styles.statusChip,
-                statusFilter === "paid" && styles.selectedChip,
-              ]}
-              textStyle={
-                statusFilter === "paid"
-                  ? styles.selectedChipText
-                  : { color: theme.colors.onSurface }
-              }
-              selectedColor="#FFFFFF"
-            >
-              Paid
-            </Chip>
-          </View>
-        </View>
-
-        <View style={styles.modalActions}>
-          <Button
-            mode="outlined"
-            onPress={() => setStatusFilter("all")}
-            style={styles.resetButton}
-            textColor={theme.colors.primary}
-          >
-            Reset Filters
-          </Button>
-          <Button
-            mode="contained"
-            onPress={() => setFilterModalOpen(false)}
-            style={styles.applyButton}
-            labelStyle={styles.buttonLabel}
-          >
-            Apply Filters
-          </Button>
-        </View>
-      </Modal>
-
-      {/* Add Loan Modal */}
-      <Modal
-        ref={addLoanModalRef}
-        style={[styles.addLoanModal, { backgroundColor: theme.colors.surface }]}
-        position="center"
-        isOpen={addLoanModalOpen}
-        onClosed={() => setAddLoanModalOpen(false)}
-        backdropPressToClose
-        swipeToClose
-      >
-        <View style={styles.modalHeader}>
-          <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-            Add New Loan
-          </Text>
-          <TouchableOpacity onPress={() => setAddLoanModalOpen(false)}>
-            <MaterialCommunityIcons
-              name="close"
-              size={24}
-              color={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.addLoanForm}>
-          <TextInput
-            label="Borrower Name *"
-            value={borrowerName}
-            onChangeText={setBorrowerName}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            textColor={theme.colors.onSurface}
-          />
-
-          <TextInput
-            label="Phone Number"
-            value={borrowerPhone}
-            onChangeText={setBorrowerPhone}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            keyboardType="phone-pad"
-            textColor={theme.colors.onSurface}
-          />
-
-          <TextInput
-            label="Loan Amount *"
-            value={amount}
-            onChangeText={setAmount}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            keyboardType="numeric"
-            left={
-              <TextInput.Affix
-                text="₹"
-                textStyle={{ color: theme.colors.onSurfaceVariant }}
-              />
-            }
-            textColor={theme.colors.onSurface}
-          />
-
-          <TextInput
-            label="Interest Rate *"
-            value={interestRate}
-            onChangeText={setInterestRate}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            keyboardType="numeric"
-            right={
-              <TextInput.Affix
-                text="%"
-                textStyle={{ color: theme.colors.onSurfaceVariant }}
-              />
-            }
-            textColor={theme.colors.onSurface}
-          />
-
-          <View style={styles.interestRateTypeContainer}>
-            <Text
-              style={[
-                styles.dateLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Interest Rate Type
-            </Text>
-            <View style={styles.methodOptions}>
-              <Chip
-                mode={interestRateType === "monthly" ? "flat" : "outlined"}
-                selected={interestRateType === "monthly"}
-                onPress={() => setInterestRateType("monthly")}
-                style={[
-                  styles.methodChip,
-                  interestRateType === "monthly" && styles.selectedChip,
-                ]}
-                textStyle={
-                  interestRateType === "monthly"
-                    ? styles.selectedChipText
-                    : { color: theme.colors.onSurface }
-                }
-                selectedColor="#FFFFFF"
-              >
-                Monthly
-              </Chip>
-              <Chip
-                mode={interestRateType === "yearly" ? "flat" : "outlined"}
-                selected={interestRateType === "yearly"}
-                onPress={() => setInterestRateType("yearly")}
-                style={[
-                  styles.methodChip,
-                  interestRateType === "yearly" && styles.selectedChip,
-                ]}
-                textStyle={
-                  interestRateType === "yearly"
-                    ? styles.selectedChipText
-                    : { color: theme.colors.onSurface }
-                }
-                selectedColor="#FFFFFF"
-              >
-                Yearly
-              </Chip>
-            </View>
-          </View>
-
-          <View style={styles.dateContainer}>
-            <Text
-              style={[
-                styles.dateLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Start Date
-            </Text>
-            <Button
-              mode="outlined"
-              onPress={() => setShowStartDatePicker(true)}
-              style={styles.dateButton}
-              textColor={theme.colors.primary}
-            >
-              {startDate.toLocaleDateString()}
-            </Button>
-            {showStartDatePicker && (
-              <DateTimePicker
-                value={startDate}
-                mode="date"
-                display="default"
-                onChange={onChangeStartDate}
-                themeVariant={theme.dark ? "dark" : "light"}
-              />
-            )}
-          </View>
-
-          <View style={styles.dateContainer}>
-            <Text
-              style={[
-                styles.dateLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Due Date
-            </Text>
-            <Button
-              mode="outlined"
-              onPress={() => setShowDueDatePicker(true)}
-              style={styles.dateButton}
-              textColor={theme.colors.primary}
-            >
-              {dueDate.toLocaleDateString()}
-            </Button>
-            {showDueDatePicker && (
-              <DateTimePicker
-                value={dueDate}
-                mode="date"
-                display="default"
-                onChange={onChangeDueDate}
-                themeVariant={theme.dark ? "dark" : "light"}
-              />
-            )}
-          </View>
-
-          <TextInput
-            label="Notes"
-            value={notes}
-            onChangeText={setNotes}
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            multiline
-            numberOfLines={3}
-            textColor={theme.colors.onSurface}
-          />
-        </View>
-
-        <View style={styles.modalActions}>
-          <Button
-            mode="outlined"
-            onPress={() => setAddLoanModalOpen(false)}
-            style={styles.cancelButton}
-            textColor={theme.colors.primary}
-          >
-            Cancel
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleAddLoan}
-            style={styles.saveButton}
-            labelStyle={styles.buttonLabel}
-          >
-            Save Loan
-          </Button>
-        </View>
-      </Modal>
-
-      {/* Render the AlertComponent */}
+ 
       <AlertComponent />
     </View>
   );
