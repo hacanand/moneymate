@@ -1,0 +1,64 @@
+// Prisma schema for MoneyMate app
+// Run `npx prisma generate` and `npx prisma migrate dev` after editing
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mongodb"
+    url      = env("MONGO_URI")
+}
+
+model Loan {
+    id               String    @id @default(auto()) @map("_id") @db.ObjectId
+    borrowerName     String
+    borrowerPhone    String?
+    amount           Float
+    interestRate     Float
+    interestRateType String
+    startDate        DateTime
+    paidDate         DateTime?
+    notes            String?
+    paymentMode      String?
+    paymentProofUri  String?
+    paymentProofType String?
+    paymentProofName String?
+    loanPurpose      String?
+    bankAccount      String?
+    status           String    @default("active")
+    payments         Payment[]
+    createdAt        DateTime  @default(now())
+    updatedAt        DateTime  @updatedAt
+}
+
+model Payment {
+    id     String   @id @default(auto()) @map("_id") @db.ObjectId
+    loanId String   @db.ObjectId
+    loan   Loan     @relation(fields: [loanId], references: [id])
+    amount Float
+    date   DateTime
+    method String?
+    notes  String?
+}
+
+model UserProfile {
+    id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId               String
+    email                String
+    fullName             String?
+    imageUrl             String?
+    biometricEnabled     Boolean?
+    darkMode             Boolean? @default(true)
+    notificationsEnabled Boolean?
+    createdAt            DateTime @default(now())
+    updatedAt            DateTime @updatedAt
+}
+
+model PaymentProof {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    name      String
+    type      String
+    data      Bytes
+    createdAt DateTime @default(now())
+}

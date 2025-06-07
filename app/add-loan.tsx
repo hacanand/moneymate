@@ -27,19 +27,106 @@ export default function AddLoanScreen() {
   >("monthly");
   const [startDate, setStartDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-  const [dueDate, setDueDate] = useState(new Date());
-  const [showDueDatePicker, setShowDueDatePicker] = useState(false);
   const [notes, setNotes] = useState("");
-  const [paymentMode, setPaymentMode] = useState("");
   const [paymentProof, setPaymentProof] = useState<any>(null);
   const [loanPurpose, setLoanPurpose] = useState("");
   const [bankAccount, setBankAccount] = useState("");
   const [selectedPaymentMode, setSelectedPaymentMode] = useState("Cash");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showError, setShowError] = useState(false);
   const paymentModes = ["Cash", "Bank Transfer", "UPI", "Cheque", "Other"];
 
-  const handleAddLoan = () => {
-    // TODO: Add loan logic here
-    router.back();
+  const handleAddLoan = async () => {
+    setLoading(true);
+    setError(null);
+    setShowError(false);
+    try {
+      let paymentProofData = undefined;
+      if (paymentProof && paymentProof.uri) {
+        const response = await fetch(paymentProof.uri);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result?.toString().split(",")[1];
+          // Ensure state update and API call are not missed
+          handleSubmitLoan(base64data);
+        };
+        reader.onerror = () => {
+          setError("Failed to read payment proof file.");
+          setShowError(true);
+          setTimeout(() => setShowError(false), 4000);
+          setLoading(false);
+        };
+        reader.readAsDataURL(blob);
+        return;
+      } else {
+        handleSubmitLoan();
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to add loan. Please try again.");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
+      setLoading(false);
+    }
+  };
+
+  // Helper to submit loan after file is read
+  const handleSubmitLoan = async (paymentProofData?: string) => {
+    try {
+      let apiUrl = "/api/add-loan";
+      if (Platform.OS !== "web") {
+        apiUrl = "http://192.168.1.100:3000/api/add-loan";
+      }
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          borrowerName,
+          borrowerPhone,
+          amount,
+          interestRate,
+          interestRateType,
+          startDate: startDate.toISOString(), // Always send ISO string
+          notes,
+          paymentMode: selectedPaymentMode,
+          paymentProofUri: paymentProof?.uri,
+          paymentProofType: paymentProof?.type,
+          paymentProofName: paymentProof?.name,
+          paymentProofData,
+          loanPurpose,
+          bankAccount,
+        }),
+      });
+      const data = await res.text();
+      let json: any = null;
+      try {
+        json = JSON.parse(data);
+      } catch (e) {
+        setError("Unexpected server response. Please try again later.");
+        setShowError(true);
+        setTimeout(() => setShowError(false), 4000);
+        setLoading(false);
+        console.log("API non-JSON response:", data); // Debugging
+        return;
+      }
+      if (!res.ok) {
+        setError(json?.error || "Failed to add loan. Please try again.");
+        setShowError(true);
+        setTimeout(() => setShowError(false), 4000);
+        setLoading(false);
+        console.log("API error:", json); // Debugging
+        return;
+      }
+      setLoading(false);
+      router.back();
+    } catch (err: any) {
+      setError(err.message || "Failed to add loan. Please try again.");
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
+      setLoading(false);
+      console.log("API exception:", err); // Debugging
+    }
   };
 
   const handlePickImage = async () => {
@@ -104,6 +191,11 @@ export default function AddLoanScreen() {
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={{
+            flex: 1,
+            paddingHorizontal: 4,
+          }}
         >
           <View
             style={[
@@ -448,63 +540,89 @@ export default function AddLoanScreen() {
             />
           </View>
         </ScrollView>
-        <View
-          style={[
-            styles.actions,
-            {
-              
-              backgroundColor: theme.colors.background,
-              // borderTopWidth: 1,
-              borderTopColor: theme.colors.outline,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: -2 },
-              shadowOpacity: 0.06,
-              shadowRadius: 8,
-              elevation: 8,
-            },
-          ]}
-        >
-          <Button
-            mode="outlined"
-            onPress={() => router.back()}
+        <View>
+          {showError && error && (
+            <View
+              style={{ width: "100%", alignItems: "center", marginBottom: 8 }}
+            >
+              <Text
+                style={{
+                  color: theme.colors.error,
+                  backgroundColor: theme.colors.error + "22",
+                  borderRadius: 8,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  textAlign: "center",
+                  fontSize: 15,
+                  fontFamily: "Roboto-Medium",
+                  maxWidth: 400,
+                }}
+                numberOfLines={3}
+                ellipsizeMode="tail"
+              >
+                {error}
+              </Text>
+            </View>
+          )}
+          <View
             style={[
-              styles.cancelButton,
+              styles.actions,
               {
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: theme.colors.outline,
-                backgroundColor: theme.colors.surface,
+                backgroundColor: theme.colors.background,
+                borderTopColor: theme.colors.outline,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: -2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
+                elevation: 8,
               },
             ]}
-            textColor={theme.colors.primary}
-            icon="close"
-            contentStyle={{ height: 48 }}
-            labelStyle={{
-              fontSize: 16,
-              fontFamily: "Roboto-Medium",
-              letterSpacing: 0.5,
-            }}
           >
-            Cancel
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleAddLoan}
-            style={[
-              styles.saveButton,
-              { borderRadius: 12, backgroundColor: theme.colors.primary },
-            ]}
-            icon="check"
-            textColor={theme.dark ? "#fff" : "#fff"}
-            contentStyle={{ height: 48 }}
-            labelStyle={{
-              fontSize: 16,
-              fontFamily: "Roboto-Medium",
-              letterSpacing: 0.5,
-            }}
-          >
-            Save Loan
-          </Button>
+            <Button
+              mode="outlined"
+              onPress={() => router.back()}
+              style={[
+                styles.cancelButton,
+                {
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: theme.colors.outline,
+                  backgroundColor: theme.colors.surface,
+                },
+              ]}
+              textColor={theme.colors.primary}
+              icon="close"
+              contentStyle={{ height: 48 }}
+              labelStyle={{
+                fontSize: 16,
+                fontFamily: "Roboto-Medium",
+                letterSpacing: 0.5,
+              }}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              mode="contained"
+              onPress={handleAddLoan}
+              style={[
+                styles.saveButton,
+                { borderRadius: 12, backgroundColor: theme.colors.primary },
+              ]}
+              icon={loading ? undefined : "check"}
+              loading={loading}
+              disabled={loading}
+              textColor={theme.dark ? "#fff" : "#fff"}
+              contentStyle={{ height: 48 }}
+              labelStyle={{
+                fontSize: 16,
+                fontFamily: "Roboto-Medium",
+                letterSpacing: 0.5,
+              }}
+            >
+              {loading ? "Saving..." : "Save Loan"}
+            </Button>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>

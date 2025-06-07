@@ -13,6 +13,9 @@ interface LoanCardProps {
   theme: any;
 }
 
+// Shared card/section padding for visual consistency
+const cardPadding = 20;
+
 const InterestIcon = ({ color = "#4CAF50", size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -70,7 +73,9 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                 marginBottom: 16,
                 borderRadius: 12,
                 elevation: 3,
+                marginHorizontal: 8,
                 backgroundColor: theme.colors.surface,
+                padding: cardPadding, // uniform card padding
               },
               loan.status === "paid" && { opacity: 0.7 },
             ]}
@@ -147,7 +152,7 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                   <RupeesIcon color={theme.colors.primary} size={16} />
+                  <RupeesIcon color={theme.colors.primary} size={16} />
                   <Text
                     style={[
                       {

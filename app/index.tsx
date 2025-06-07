@@ -153,50 +153,137 @@ export default function LoginScreen() {
     }
   };
 
+  // Move all styles to StyleSheet for maintainability and theme support
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    keyboardAvoidingView: {
+      flex: 1,
+    },
+    scrollView: {
+      flexGrow: 1,
+      justifyContent: "center",
+      padding: 0,
+    },
+    logoContainer: {
+      alignItems: "center",
+      marginBottom: 36,
+      marginTop: 24,
+    },
+    logoSurface: {
+      elevation: 8,
+      shadowColor: theme.colors.shadow,
+      shadowOpacity: 0.1,
+      shadowRadius: 24,
+      borderRadius: 32,
+      width: 110,
+      height: 110,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.surface,
+    },
+    logo: {
+      width: 70,
+      height: 70,
+      borderRadius: 20,
+    },
+    appName: {
+      fontSize: 32,
+      fontFamily: "Roboto-Bold",
+      color: theme.colors.primary,
+      marginTop: 18,
+      letterSpacing: 0.5,
+    },
+    tagline: {
+      fontSize: 16,
+      fontFamily: "Roboto-Regular",
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 8,
+      textAlign: "center",
+      maxWidth: 260,
+    },
+    formContainer: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 18,
+      padding: 28,
+      marginHorizontal: 18,
+      elevation: 6,
+      shadowColor: theme.colors.shadow,
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      alignItems: "center",
+    },
+    googleButton: {
+      width: "100%",
+      borderRadius: 8,
+      marginTop: 8,
+      marginBottom: biometricAvailable ? 18 : 0,
+      paddingVertical: 6,
+      backgroundColor: theme.colors.primary,
+    },
+    googleButtonLabel: {
+      fontSize: 17,
+      fontFamily: "Roboto-Medium",
+      letterSpacing: 0.2,
+      color: "#fff",
+    },
+    biometricButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      width: "100%",
+      marginTop: 0,
+    },
+    biometricText: {
+      marginLeft: 12,
+      fontFamily: "Roboto-Medium",
+      color: theme.colors.primary,
+      fontSize: 16,
+    },
+  });
+
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardAvoidingView}
       >
-        <ScrollView contentContainerStyle={styles.scrollView}>
+        <ScrollView
+          contentContainerStyle={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.logoContainer}>
-            <Image
-              source={require("../assets/images/icon.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={[styles.appName, { color: theme.colors.primary }]}>
-              MoneyMate
-            </Text>
-            <Text
-              style={[styles.tagline, { color: theme.colors.onSurfaceVariant }]}
-            >
+            <Surface style={styles.logoSurface}>
+              <Image
+                source={require("../assets/images/icon.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </Surface>
+            <Text style={styles.appName}>MoneyMate</Text>
+            <Text style={styles.tagline}>
               Manage your rupee loans with ease
             </Text>
           </View>
 
-          <Surface
-            style={[
-              styles.formContainer,
-              { backgroundColor: theme.colors.surface },
-            ]}
-          >
+          <Surface style={styles.formContainer}>
             <Button
               mode="contained"
               icon={() => (
-                <MaterialCommunityIcons
-                  name="google"
-                  size={20}
-                  color="#FFFFFF"
-                />
+                <MaterialCommunityIcons name="google" size={22} color="#fff" />
               )}
               onPress={handleGoogleSignIn}
               disabled={isSigninInProgress}
               style={styles.googleButton}
               labelStyle={styles.googleButtonLabel}
+              contentStyle={{ height: 50 }}
+              accessibilityLabel="Sign in with Google"
             >
               Sign in with Google
             </Button>
@@ -205,20 +292,15 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={styles.biometricButton}
                 onPress={handleBiometricLogin}
+                activeOpacity={0.85}
+                accessibilityLabel="Login with Fingerprint"
               >
                 <MaterialCommunityIcons
                   name="fingerprint"
                   size={24}
                   color={theme.colors.primary}
                 />
-                <Text
-                  style={[
-                    styles.biometricText,
-                    { color: theme.colors.primary },
-                  ]}
-                >
-                  Login with Fingerprint
-                </Text>
+                <Text style={styles.biometricText}>Login with Fingerprint</Text>
               </TouchableOpacity>
             )}
           </Surface>
@@ -228,62 +310,3 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollView: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: 20,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-  },
-  appName: {
-    fontSize: 28,
-    fontWeight: "bold",
-    fontFamily: "Roboto-Bold",
-    marginTop: 10,
-  },
-  tagline: {
-    fontSize: 16,
-    fontFamily: "Roboto-Regular",
-    marginTop: 5,
-  },
-  formContainer: {
-    padding: 20,
-    borderRadius: 10,
-    elevation: 4,
-    alignItems: "center",
-  },
-  googleButton: {
-    width: "100%",
-    paddingVertical: 8,
-    marginTop: 20,
-  },
-  googleButtonLabel: {
-    fontSize: 16,
-    fontFamily: "Roboto-Medium",
-  },
-  biometricButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 24,
-    padding: 10,
-  },
-  biometricText: {
-    marginLeft: 10,
-    fontFamily: "Roboto-Medium",
-  },
-});

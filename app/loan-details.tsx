@@ -1,31 +1,35 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import { useRef, useState } from "react";
 import {
-  StyleSheet,
-  View,
-  ScrollView,
-  TouchableOpacity,
   Dimensions,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import Modal from "react-native-modalbox";
 import {
-  Text,
   Button,
   Card,
+  Chip,
   Divider,
   List,
-  Chip,
+  Text,
   TextInput,
 } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Modal from "react-native-modalbox";
-import { router, useLocalSearchParams } from "expo-router";
-import type { Loan, Payment, PaymentMethod } from "../types/loan";
-import { useTheme } from "../context/ThemeContext";
 import { useCustomAlert } from "../components/CustomAlert";
+import { useTheme } from "../context/ThemeContext";
+import type { Loan, Payment, PaymentMethod } from "../types/loan";
 
 // Get screen dimensions
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+// Shared card/section padding for visual consistency
+const cardPadding = 20;
+const cardMargin = 8;
 
 export default function LoanDetailsScreen() {
   const { theme } = useTheme();
@@ -136,10 +140,18 @@ export default function LoanDetailsScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <Card
+        style={{
+          backgroundColor: theme.colors.surface,
+          marginHorizontal: cardMargin,
+          marginTop: cardMargin,
+          marginBottom: cardMargin,
+          padding: cardPadding,
+          borderRadius: 16,
+          elevation: 3,
+        }}
+      >
         <Card.Content>
           <View style={styles.header}>
             <View>
@@ -173,7 +185,17 @@ export default function LoanDetailsScreen() {
         </Card.Content>
       </Card>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card
+        style={{
+          backgroundColor: theme.colors.surface,
+          marginHorizontal: cardMargin,
+          marginTop: cardMargin,
+          marginBottom: cardMargin,
+          padding: cardPadding,
+          borderRadius: 16,
+          elevation: 3,
+        }}
+      >
         <Card.Content>
           <Text
             style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
@@ -256,7 +278,17 @@ export default function LoanDetailsScreen() {
         </Card.Content>
       </Card>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card
+        style={{
+          backgroundColor: theme.colors.surface,
+          marginHorizontal: cardMargin,
+          marginTop: cardMargin,
+          marginBottom: cardMargin,
+          padding: cardPadding,
+          borderRadius: 16,
+          elevation: 3,
+        }}
+      >
         <Card.Content>
           <Text
             style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
@@ -319,7 +351,17 @@ export default function LoanDetailsScreen() {
         </Card.Content>
       </Card>
 
-      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Card
+        style={{
+          backgroundColor: theme.colors.surface,
+          marginHorizontal: cardMargin,
+          marginTop: cardMargin,
+          marginBottom: cardMargin,
+          padding: cardPadding,
+          borderRadius: 16,
+          elevation: 3,
+        }}
+      >
         <Card.Content>
           <View style={styles.paymentHeaderRow}>
             <Text
@@ -572,7 +614,6 @@ export default function LoanDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
   card: {
     marginBottom: 16,
@@ -623,6 +664,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginBottom: 24,
+    marginHorizontal: 16
   },
   button: {
     marginBottom: 12,

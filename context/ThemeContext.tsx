@@ -80,7 +80,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const colorScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   // Load theme preference from storage on mount
   useEffect(() => {

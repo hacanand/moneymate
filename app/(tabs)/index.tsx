@@ -4,21 +4,20 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
-  Dimensions,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  View,
-  type ListRenderItem,
+    Dimensions,
+    FlatList,
+    ScrollView,
+    StyleSheet,
+    View,
+    type ListRenderItem,
 } from "react-native";
-import { Button, FAB, Text, useTheme } from "react-native-paper";
+import { Button, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCustomAlert } from "../../components/CustomAlert";
 import { LoanCard } from "../../components/LoanCard";
 import { LoanTabs } from "../../components/LoanTabs";
 import { SummaryCards } from "../../components/SummaryCards";
 import type { Loan, LoanStatus } from "../../types/loan";
-import Svg, { Path } from "react-native-svg";
 
 // Get screen dimensions
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -67,28 +66,10 @@ const initialLoans: Loan[] = [
   },
 ];
 
-// Helper SVG icons
-const InterestIcon = ({ color = "#4CAF50", size = 18 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"
-      fill={color}
-    />
-  </Svg>
-);
-const CalendarIcon = ({ color = "#2196F3", size = 16 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zm0-13H5V6h14v1z"
-      fill={color}
-    />
-  </Svg>
-);
-const RupeeIcon = ({ color = "#388E3C", size = 16 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M6 6h12v2H6zm0 3h12v2H6zm0 3h7v2H6zm0 3h7v2H6z" fill={color} />
-  </Svg>
-);
+// Shared card/section padding for visual consistency
+const cardPadding = 20;
+const cardMargin = 16;
+ 
 
 export default function LoanListPage() {
   const theme = useTheme();
@@ -288,7 +269,6 @@ export default function LoanListPage() {
         Add New Loan
       </Button>
 
- 
       <AlertComponent />
     </View>
   );
@@ -298,12 +278,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
+  
   searchbar: {
     flex: 1,
     marginRight: 8,

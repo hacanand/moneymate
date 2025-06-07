@@ -2,6 +2,9 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Surface, Text } from "react-native-paper";
 
+// Shared card/section padding for visual consistency
+const cardPadding = 20;
+
 interface SummaryCardsProps {
   totalActive: number;
   totalInterest: number;
@@ -18,7 +21,12 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
       <Surface
         style={[
           styles.summaryCard,
-          { backgroundColor: theme.colors.surface, flex: 1, marginRight: 8 },
+          {
+            backgroundColor: theme.colors.surface,
+            flex: 1,
+            marginRight: 8,
+            padding: cardPadding,
+          }, // uniform card padding
         ]}
       >
         <Text
@@ -36,7 +44,12 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
       <Surface
         style={[
           styles.summaryCard,
-          { backgroundColor: theme.colors.surface, flex: 1, marginLeft: 8 },
+          {
+            backgroundColor: theme.colors.surface,
+            flex: 1,
+            marginLeft: 8,
+            padding: cardPadding,
+          }, // uniform card padding
         ]}
       >
         <Text
@@ -59,6 +72,7 @@ const styles = StyleSheet.create({
   summaryContainer: {
     paddingHorizontal: 8,
     paddingTop: 12,
+    marginHorizontal: 8,
     paddingBottom: 8,
   },
   summaryRow: {
@@ -66,9 +80,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   summaryCard: {
-    padding: 16,
     borderRadius: 8,
     elevation: 4,
+    // padding: 16, // removed, now set inline with cardPadding
   },
   summaryTitle: {
     fontSize: 14,
