@@ -1,25 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  StyleSheet,
-  View,
-  Image,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from "react-native";
-import { Button, Text, Surface } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth, useSSO, useUser } from "@clerk/clerk-expo";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
 import { router } from "expo-router";
-import { useAuth, useOAuth, useSSO, useUser } from "@clerk/clerk-expo";
-import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
-import { useTheme } from "../context/ThemeContext";
+import * as WebBrowser from "expo-web-browser";
+import { useEffect, useState } from "react";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Button, Surface, Text } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useCustomAlert } from "../components/CustomAlert";
+import { useTheme } from "../context/ThemeContext";
 
 // Required for OAuth
 WebBrowser.maybeCompleteAuthSession();
@@ -35,10 +35,16 @@ export default function LoginScreen() {
   const { startSSOFlow } = useSSO();
 
   useEffect(() => {
-    // Check if biometric authentication is available
+    // Only check for biometric availability, do not trigger authentication here
     checkBiometricAvailability();
+    // Remove auto-redirect if signed in, to avoid double navigation and double biometric
+    // if (isSignedIn) {
+    //   router.replace("/(tabs)");
+    // }
+  }, []); // Remove isSignedIn from dependency array
 
-    // If user is already signed in, redirect to main app
+  useEffect(() => {
+    // If user is signed in, redirect to main app (separate effect, no biometric trigger)
     if (isSignedIn) {
       router.replace("/(tabs)");
     }
@@ -49,10 +55,8 @@ export default function LoginScreen() {
       const available = await LocalAuthentication.hasHardwareAsync();
       const compatible =
         await LocalAuthentication.supportedAuthenticationTypesAsync();
-
-      // Also check if we have stored biometric credentials
       const storedUserId = await SecureStore.getItemAsync("biometric_user_id");
-
+      // Only set biometricAvailable if all checks pass, but do NOT trigger authentication here
       setBiometricAvailable(
         available && compatible.length > 0 && !!storedUserId
       );
@@ -167,7 +171,9 @@ export default function LoginScreen() {
             <Text style={[styles.appName, { color: theme.colors.primary }]}>
               MoneyMate
             </Text>
-            <Text style={[styles.tagline, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+              style={[styles.tagline, { color: theme.colors.onSurfaceVariant }]}
+            >
               Manage your rupee loans with ease
             </Text>
           </View>

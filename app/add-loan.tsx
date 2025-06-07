@@ -91,7 +91,7 @@ export default function AddLoanScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 60}
     >
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -102,13 +102,13 @@ export default function AddLoanScreen() {
           </Text>
         </View>
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}
           keyboardShouldPersistTaps="handled"
         >
           <View
             style={[
               styles.form,
-              { backgroundColor: theme.dark ? "#232323" : "#fff" },
+              { backgroundColor: theme.dark ? theme.colors.surface : "#fff" },
             ]}
           >
             <TextInput
@@ -118,6 +118,13 @@ export default function AddLoanScreen() {
               mode="outlined"
               style={[styles.input, { backgroundColor: theme.colors.surface }]}
               textColor={theme.colors.onSurface}
+              placeholder="Enter borrower's full name"
+              left={
+                <TextInput.Icon
+                  icon="account"
+                  color={theme.colors.onSurfaceVariant}
+                />
+              }
             />
             <TextInput
               label="Phone Number"
@@ -127,6 +134,13 @@ export default function AddLoanScreen() {
               style={[styles.input, { backgroundColor: theme.colors.surface }]}
               keyboardType="phone-pad"
               textColor={theme.colors.onSurface}
+              placeholder="Enter phone number"
+              left={
+                <TextInput.Icon
+                  icon="phone"
+                  color={theme.colors.onSurfaceVariant}
+                />
+              }
             />
             <TextInput
               label="Loan Amount *"
@@ -136,12 +150,13 @@ export default function AddLoanScreen() {
               style={[styles.input, { backgroundColor: theme.colors.surface }]}
               keyboardType="numeric"
               left={
-                <TextInput.Affix
-                  text="₹"
-                  textStyle={{ color: theme.colors.onSurfaceVariant }}
+                <TextInput.Icon
+                  icon="currency-inr"
+                  color={theme.colors.onSurfaceVariant}
                 />
               }
               textColor={theme.colors.onSurface}
+              placeholder="Enter loan amount"
             />
             <TextInput
               label="Interest Rate *"
@@ -156,7 +171,14 @@ export default function AddLoanScreen() {
                   textStyle={{ color: theme.colors.onSurfaceVariant }}
                 />
               }
+              left={
+                <TextInput.Icon
+                  icon="percent"
+                  color={theme.colors.onSurfaceVariant}
+                />
+              }
               textColor={theme.colors.onSurface}
+              placeholder="Enter interest rate"
             />
             <View style={styles.interestRateTypeContainer}>
               <Text
@@ -227,6 +249,13 @@ export default function AddLoanScreen() {
               mode="outlined"
               style={[styles.input, { backgroundColor: theme.colors.surface }]}
               textColor={theme.colors.onSurface}
+              placeholder="Purpose of the loan"
+              left={
+                <TextInput.Icon
+                  icon="notebook-outline"
+                  color={theme.colors.onSurfaceVariant}
+                />
+              }
             />
             <Text
               style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
@@ -239,7 +268,7 @@ export default function AddLoanScreen() {
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: theme.colors.outline,
-                backgroundColor: theme.colors.background, // Always use theme.colors.surface for Picker bg
+                backgroundColor: theme.colors.surface, // Always use theme.colors.surface for Picker bg
                 overflow: "hidden",
               }}
             >
@@ -248,10 +277,9 @@ export default function AddLoanScreen() {
                 onValueChange={setSelectedPaymentMode}
                 style={{
                   color: theme.colors.onSurface,
-
-                  minHeight: 44,
                 }}
                 dropdownIconColor={theme.colors.onSurfaceVariant}
+                itemStyle={{ color: theme.colors.onSurface }}
                 mode="dialog"
               >
                 {paymentModes.map((mode) => (
@@ -276,6 +304,12 @@ export default function AddLoanScreen() {
                 ]}
                 textColor={theme.colors.onSurface}
                 placeholder="Account number, IFSC, etc."
+                left={
+                  <TextInput.Icon
+                    icon="bank"
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                }
               />
             )}
 
@@ -404,22 +438,70 @@ export default function AddLoanScreen() {
               multiline
               numberOfLines={3}
               textColor={theme.colors.onSurface}
+              placeholder="Additional notes (optional)"
+              left={
+                <TextInput.Icon
+                  icon="note-text-outline"
+                  color={theme.colors.onSurfaceVariant}
+                />
+              }
             />
           </View>
         </ScrollView>
-        <View style={styles.actions}>
+        <View
+          style={[
+            styles.actions,
+            {
+              
+              backgroundColor: theme.colors.background,
+              // borderTopWidth: 1,
+              borderTopColor: theme.colors.outline,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+              elevation: 8,
+            },
+          ]}
+        >
           <Button
             mode="outlined"
             onPress={() => router.back()}
-            style={styles.cancelButton}
+            style={[
+              styles.cancelButton,
+              {
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: theme.colors.outline,
+                backgroundColor: theme.colors.surface,
+              },
+            ]}
             textColor={theme.colors.primary}
+            icon="close"
+            contentStyle={{ height: 48 }}
+            labelStyle={{
+              fontSize: 16,
+              fontFamily: "Roboto-Medium",
+              letterSpacing: 0.5,
+            }}
           >
             Cancel
           </Button>
           <Button
             mode="contained"
             onPress={handleAddLoan}
-            style={styles.saveButton}
+            style={[
+              styles.saveButton,
+              { borderRadius: 12, backgroundColor: theme.colors.primary },
+            ]}
+            icon="check"
+            textColor={theme.dark ? "#fff" : "#fff"}
+            contentStyle={{ height: 48 }}
+            labelStyle={{
+              fontSize: 16,
+              fontFamily: "Roboto-Medium",
+              letterSpacing: 0.5,
+            }}
           >
             Save Loan
           </Button>

@@ -15,7 +15,6 @@ import { Button, FAB, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCustomAlert } from "../../components/CustomAlert";
 import { LoanCard } from "../../components/LoanCard";
-import { LoanFilterModal } from "../../components/LoanFilterModal";
 import { LoanTabs } from "../../components/LoanTabs";
 import { SummaryCards } from "../../components/SummaryCards";
 import type { Loan, LoanStatus } from "../../types/loan";

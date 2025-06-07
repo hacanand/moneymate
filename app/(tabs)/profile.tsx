@@ -1,28 +1,28 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useAuth, useUser } from "@clerk/clerk-expo";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as LocalAuthentication from "expo-local-authentication";
+import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import { useEffect, useRef, useState } from "react";
 import {
-  StyleSheet,
-  View,
-  ScrollView,
-  TouchableOpacity,
   Dimensions,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import Modal from "react-native-modalbox";
 import {
-  Text,
   Avatar,
   Button,
   Divider,
   List,
   Switch,
+  Text,
 } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import * as LocalAuthentication from "expo-local-authentication";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Modal from "react-native-modalbox";
-import * as SecureStore from "expo-secure-store";
-import { router } from "expo-router";
-import { useUser, useAuth } from "@clerk/clerk-expo";
 import { useTheme } from "../../context/ThemeContext";
 // Import the useCustomAlert hook
 import { useCustomAlert } from "../../components/CustomAlert";
@@ -153,8 +153,10 @@ export default function ProfileScreen() {
       // Clear biometric login data
       await SecureStore.deleteItemAsync("biometric_user_id");
       await SecureStore.deleteItemAsync("clerk_session_token");
-
-      router.replace("/");
+      // Use router.replace to prevent back navigation to protected screens
+      setTimeout(() => {
+        router.replace("/index");
+      }, 300);
     } catch (error) {
       console.error("Error signing out:", error);
       showAlert({
@@ -173,9 +175,25 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={{ paddingBottom: insets.bottom }}
+      contentContainerStyle={{
+        paddingBottom: insets.bottom,
+        paddingHorizontal: 0,
+      }}
+      showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.colors.surfaceVariant,
+            borderRadius: 0,
+            marginBottom: 0,
+            paddingBottom: 32,
+          },
+        ]}
+      >
         {userImageUrl ? (
           <Avatar.Image
             size={100}
@@ -189,16 +207,25 @@ export default function ProfileScreen() {
             style={styles.avatar}
           />
         )}
-        <Text style={[styles.name, { color: theme.colors.onSurface }]}>
+        <Text
+          style={[
+            styles.name,
+            { color: theme.colors.onSurface, marginTop: 8, marginBottom: 2 },
+          ]}
+        >
           {userName}
         </Text>
-        <Text style={[styles.email, { color: theme.colors.onSurfaceVariant }]}>
+        <Text
+          style={[
+            styles.email,
+            { color: theme.colors.onSurfaceVariant, marginBottom: 10 },
+          ]}
+        >
           {userEmail}
         </Text>
         <Button
           mode="outlined"
           onPress={() => {
-            // In a real app, you might redirect to Clerk's user profile page
             showAlert({
               title: "Profile Management",
               message:
@@ -207,37 +234,80 @@ export default function ProfileScreen() {
           }}
           style={[
             styles.editProfileButton,
-            { borderColor: theme.colors.primary },
+            {
+              borderColor: theme.colors.primary,
+              borderRadius: 8,
+              marginTop: 8,
+            },
           ]}
           textColor={theme.colors.primary}
+          icon={({ size, color }) => (
+            <MaterialCommunityIcons
+              name="account-edit"
+              size={size}
+              color={color}
+            />
+          )}
+          contentStyle={{ height: 44 }}
+          labelStyle={{
+            fontFamily: "Roboto-Medium",
+            fontSize: 15,
+            letterSpacing: 0.2,
+          }}
         >
           Edit Profile
         </Button>
       </View>
 
-      <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+      <View
+        style={[
+          styles.section,
+          {
+            backgroundColor: theme.colors.surface,
+            marginHorizontal: 12,
+            marginTop: 20,
+            padding: 0,
+            borderRadius: 16,
+            shadowColor: theme.colors.shadow,
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+            elevation: 2,
+          },
+        ]}
+      >
         <Text
           style={[
             styles.sectionTitle,
             {
               backgroundColor: theme.colors.surfaceVariant,
               color: theme.colors.onSurface,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              paddingLeft: 20,
+              paddingRight: 20,
+              paddingTop: 14,
+              paddingBottom: 8,
+              fontSize: 17,
             },
           ]}
         >
           Account Settings
         </Text>
+        <Divider
+          style={{ backgroundColor: theme.colors.surfaceVariant, height: 1 }}
+        />
         <List.Item
           title="Manage Google Account"
           titleStyle={[styles.listItemTitle, { color: theme.colors.onSurface }]}
-          left={(props) => (
+          left={() => (
             <MaterialCommunityIcons
               name="google"
               size={24}
               color={theme.colors.onSurfaceVariant}
+              style={{ marginTop: 2 }}
             />
           )}
-          right={(props) => (
+          right={() => (
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
@@ -249,37 +319,37 @@ export default function ProfileScreen() {
               title: "Google Account",
               message:
                 "To manage your Google account settings, please visit your Google account page.",
-              buttons: [
-                {
-                  text: "OK",
-                  style: "default",
-                },
-              ],
+              buttons: [{ text: "OK", style: "default" }],
             });
           }}
-          style={styles.listItem}
+          style={[styles.listItem, { paddingHorizontal: 20 }]}
         />
-        <Divider style={{ backgroundColor: theme.colors.surfaceVariant }} />
+        {/* <Divider
+          style={{ backgroundColor: theme.colors.surfaceVariant, height: 1 }}
+        />
         <List.Item
           title="Notifications"
           titleStyle={[styles.listItemTitle, { color: theme.colors.onSurface }]}
-          left={(props) => (
+          left={() => (
             <MaterialCommunityIcons
               name="bell"
               size={24}
               color={theme.colors.onSurfaceVariant}
+              style={{ marginTop: 2 }}
             />
           )}
-          right={(props) => (
+          right={() => (
             <Switch
               value={notificationsEnabled}
               onValueChange={onToggleNotifications}
               color={theme.colors.primary}
             />
           )}
-          style={styles.listItem}
+          style={[styles.listItem, { paddingHorizontal: 20 }]}
+        /> */}
+        <Divider
+          style={{ backgroundColor: theme.colors.surfaceVariant, height: 1 }}
         />
-        <Divider style={{ backgroundColor: theme.colors.surfaceVariant }} />
         {biometricAvailable && (
           <>
             <List.Item
@@ -288,71 +358,104 @@ export default function ProfileScreen() {
                 styles.listItemTitle,
                 { color: theme.colors.onSurface },
               ]}
-              left={(props) => (
+              left={() => (
                 <MaterialCommunityIcons
                   name="fingerprint"
                   size={24}
                   color={theme.colors.onSurfaceVariant}
+                  style={{ marginTop: 12 }}
                 />
               )}
-              right={(props) => (
+              right={() => (
                 <Switch
                   value={biometricEnabled}
                   onValueChange={onToggleBiometric}
                   color={theme.colors.primary}
                 />
               )}
-              style={styles.listItem}
+              style={[styles.listItem, { paddingHorizontal: 20 }]}
             />
-            <Divider style={{ backgroundColor: theme.colors.surfaceVariant }} />
+            <Divider
+              style={{
+                backgroundColor: theme.colors.surfaceVariant,
+                height: 1,
+              }}
+            />
           </>
         )}
         <List.Item
           title="Dark Mode"
           titleStyle={[styles.listItemTitle, { color: theme.colors.onSurface }]}
-          left={(props) => (
+          left={() => (
             <MaterialCommunityIcons
               name="theme-light-dark"
               size={24}
               color={theme.colors.onSurfaceVariant}
+              style={{ marginTop: 12 }}
             />
           )}
-          right={(props) => (
+          right={() => (
             <Switch
               value={isDark}
               onValueChange={toggleTheme}
               color={theme.colors.primary}
             />
           )}
-          style={styles.listItem}
+          style={[styles.listItem, { paddingHorizontal: 20 }]}
         />
       </View>
 
-      <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+      <View
+        style={[
+          styles.section,
+          {
+            backgroundColor: theme.colors.surface,
+            marginHorizontal: 12,
+            marginTop: 20,
+            padding: 0,
+            borderRadius: 16,
+            shadowColor: theme.colors.shadow,
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+            elevation: 2,
+          },
+        ]}
+      >
         <Text
           style={[
             styles.sectionTitle,
             {
               backgroundColor: theme.colors.surfaceVariant,
               color: theme.colors.onSurface,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              paddingLeft: 20,
+              paddingRight: 20,
+              paddingTop: 16,
+              paddingBottom: 8,
+              fontSize: 17,
             },
           ]}
         >
           Connected Accounts
         </Text>
+        <Divider
+          style={{ backgroundColor: theme.colors.surfaceVariant, height: 1 }}
+        />
         <List.Item
           title="Google Account"
           description="Connected"
           titleStyle={[styles.listItemTitle, { color: theme.colors.onSurface }]}
           descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={(props) => (
+          left={() => (
             <MaterialCommunityIcons
               name="google"
               size={24}
               color={theme.colors.onSurfaceVariant}
+              style={{ marginTop: 2 }}
             />
           )}
-          right={(props) => (
+          right={() => (
             <Text
               style={{
                 color: theme.colors.primary,
@@ -362,33 +465,60 @@ export default function ProfileScreen() {
               Connected
             </Text>
           )}
-          style={styles.listItem}
+          style={[styles.listItem, { paddingHorizontal: 20 }]}
         />
       </View>
 
-      <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+      <View
+        style={[
+          styles.section,
+          {
+            backgroundColor: theme.colors.surface,
+            marginHorizontal: 12,
+            marginTop: 20,
+            padding: 0,
+            borderRadius: 16,
+            shadowColor: theme.colors.shadow,
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+            elevation: 2,
+            marginBottom: 32,
+          },
+        ]}
+      >
         <Text
           style={[
             styles.sectionTitle,
             {
               backgroundColor: theme.colors.surfaceVariant,
               color: theme.colors.onSurface,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              paddingLeft: 20,
+              paddingRight: 20,
+              paddingTop: 16,
+              paddingBottom: 8,
+              fontSize: 17,
             },
           ]}
         >
           App
         </Text>
+        <Divider
+          style={{ backgroundColor: theme.colors.surfaceVariant, height: 1 }}
+        />
         <List.Item
           title="About MoneyMate"
           titleStyle={[styles.listItemTitle, { color: theme.colors.onSurface }]}
-          left={(props) => (
+          left={() => (
             <MaterialCommunityIcons
               name="information"
               size={24}
               color={theme.colors.onSurfaceVariant}
+              style={{ marginTop: 2 }}
             />
           )}
-          right={(props) => (
+          right={() => (
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
@@ -396,20 +526,23 @@ export default function ProfileScreen() {
             />
           )}
           onPress={() => setAboutModalOpen(true)}
-          style={styles.listItem}
+          style={[styles.listItem, { paddingHorizontal: 20 }]}
         />
-        <Divider style={{ backgroundColor: theme.colors.surfaceVariant }} />
+        <Divider
+          style={{ backgroundColor: theme.colors.surfaceVariant, height: 1 }}
+        />
         <List.Item
           title="Help & Support"
           titleStyle={[styles.listItemTitle, { color: theme.colors.onSurface }]}
-          left={(props) => (
+          left={() => (
             <MaterialCommunityIcons
               name="help-circle"
               size={24}
               color={theme.colors.onSurfaceVariant}
+              style={{ marginTop: 2 }}
             />
           )}
-          right={(props) => (
+          right={() => (
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
@@ -417,20 +550,23 @@ export default function ProfileScreen() {
             />
           )}
           onPress={() => {}}
-          style={styles.listItem}
+          style={[styles.listItem, { paddingHorizontal: 20 }]}
         />
-        <Divider style={{ backgroundColor: theme.colors.surfaceVariant }} />
+        <Divider
+          style={{ backgroundColor: theme.colors.surfaceVariant, height: 1 }}
+        />
         <List.Item
           title="Privacy Policy"
           titleStyle={[styles.listItemTitle, { color: theme.colors.onSurface }]}
-          left={(props) => (
+          left={() => (
             <MaterialCommunityIcons
               name="shield"
               size={24}
               color={theme.colors.onSurfaceVariant}
+              style={{ marginTop: 2 }}
             />
           )}
-          right={(props) => (
+          right={() => (
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
@@ -438,20 +574,23 @@ export default function ProfileScreen() {
             />
           )}
           onPress={() => {}}
-          style={styles.listItem}
+          style={[styles.listItem, { paddingHorizontal: 20 }]}
         />
-        <Divider style={{ backgroundColor: theme.colors.surfaceVariant }} />
+        <Divider
+          style={{ backgroundColor: theme.colors.surfaceVariant, height: 1 }}
+        />
         <List.Item
           title="Terms of Service"
           titleStyle={[styles.listItemTitle, { color: theme.colors.onSurface }]}
-          left={(props) => (
+          left={() => (
             <MaterialCommunityIcons
               name="file-document"
               size={24}
               color={theme.colors.onSurfaceVariant}
+              style={{ marginTop: 2 }}
             />
           )}
-          right={(props) => (
+          right={() => (
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
@@ -459,18 +598,33 @@ export default function ProfileScreen() {
             />
           )}
           onPress={() => {}}
-          style={styles.listItem}
+          style={[styles.listItem, { paddingHorizontal: 20 }]}
         />
       </View>
 
       <Button
         mode="outlined"
         onPress={handleLogout}
-        style={[styles.logoutButton, { borderColor: "#F44336" }]}
+        style={[
+          styles.logoutButton,
+          {
+            borderColor: "#F44336",
+            borderRadius: 8,
+            marginHorizontal: 16,
+            marginBottom: 32,
+            backgroundColor: theme.colors.surface,
+          },
+        ]}
         textColor="#F44336"
         icon={({ size, color }) => (
           <MaterialCommunityIcons name="logout" size={size} color={color} />
         )}
+        contentStyle={{ height: 48 }}
+        labelStyle={{
+          fontFamily: "Roboto-Medium",
+          fontSize: 16,
+          letterSpacing: 0.5,
+        }}
       >
         Logout
       </Button>
@@ -551,45 +705,70 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 0,
+    backgroundColor: "transparent",
   },
   header: {
     alignItems: "center",
-    padding: 24,
+    paddingTop: 36,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    marginBottom: 0,
   },
   avatar: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   name: {
     fontSize: 24,
     fontFamily: "Roboto-Bold",
+    marginTop: 8,
+    marginBottom: 2,
   },
   email: {
     fontSize: 16,
     fontFamily: "Roboto-Regular",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   editProfileButton: {
     borderWidth: 1,
+    marginTop: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 0,
+    borderRadius: 8,
   },
   section: {
-    marginTop: 16,
-    borderRadius: 8,
+    marginTop: 20,
+    borderRadius: 16,
     overflow: "hidden",
+    marginHorizontal: 12,
+    paddingBottom: 8,
   },
   sectionTitle: {
     fontSize: 16,
     fontFamily: "Roboto-Bold",
-    padding: 16,
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingTop: 14,
+    paddingBottom: 8,
   },
   listItem: {
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    marginVertical: 0,
+    marginHorizontal: 0,
+    minHeight: 48,
   },
   listItemTitle: {
     fontFamily: "Roboto-Regular",
   },
   logoutButton: {
-    margin: 24,
+    marginHorizontal: 16,
+    marginBottom: 32,
     borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: "transparent",
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   aboutModal: {
     height: 400,
@@ -602,6 +781,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
+    paddingHorizontal: 4,
   },
   modalTitle: {
     fontSize: 20,
@@ -610,6 +790,7 @@ const styles = StyleSheet.create({
   aboutContent: {
     flex: 1,
     alignItems: "center",
+    paddingHorizontal: 8,
   },
   logoContainer: {
     alignItems: "center",
@@ -630,6 +811,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 12,
     lineHeight: 22,
+    paddingHorizontal: 8,
   },
   copyright: {
     fontFamily: "Roboto-Regular",
@@ -639,5 +821,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     marginTop: 20,
+    alignSelf: "center",
+    paddingHorizontal: 24,
   },
 });
