@@ -5,6 +5,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
 import {
   Dimensions,
+  Image, // <-- add this import
+  Platform, // <-- add this import for platform check
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -41,11 +43,7 @@ export default function LoanDetailsScreen() {
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [reminderMessage, setReminderMessage] = useState<string>(
-    `Hello ${
-      loan?.borrowerName
-    }, this is a reminder that your loan payment of ₹${
-      loan?.amount
-    } is due on ${new Date(loan?.dueDate ?? "").toLocaleDateString()}.`
+    `Hello ${loan?.borrowerName}, this is a reminder that your loan payment of ₹${loan?.amount} is pending.`
   );
 
   // Modal references
@@ -97,28 +95,27 @@ export default function LoanDetailsScreen() {
   // Calculate interest based on rate type
   const principal = loan.amount;
   const interestRate = loan.interestRate / 100;
-  const loanStartDate = new Date(loan.date);
-  const loanDueDate = new Date(loan.dueDate);
-  const durationInDays = Math.ceil(
-    (loanDueDate.getTime() - loanStartDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const loanStartDate = new Date(loan.startDate);
+  const loanPaidDate = loan.paidDate ? new Date(loan.paidDate) : null;
+  let durationInDays = 0;
+  if (loanPaidDate) {
+    durationInDays = Math.ceil(
+      (loanPaidDate.getTime() - loanStartDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+  }
   const durationInMonths = durationInDays / 30;
   const durationInYears = durationInDays / 365;
 
   // Calculate interest based on rate type (default to monthly if not specified)
-  let interest: number;
-  if (loan.interestRateType === "yearly") {
-    interest = principal * interestRate * durationInYears;
-  } else {
-    interest = principal * interestRate * durationInMonths;
+  let interest: number = 0;
+  if (loanPaidDate) {
+    if (loan.interestRateType === "yearly") {
+      interest = principal * interestRate * durationInYears;
+    } else {
+      interest = principal * interestRate * durationInMonths;
+    }
   }
   const totalAmount = principal + interest;
-
-  // Calculate days remaining or overdue
-  const currentDate = new Date();
-  const daysRemaining = Math.ceil(
-    (loanDueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
 
   // Mock payment history
   const paymentHistory: Payment[] = [
@@ -173,6 +170,8 @@ export default function LoanDetailsScreen() {
               mode="outlined"
               style={{
                 borderColor: getStatusColor(loan.status),
+                marginBottom: 20,
+                marginRight: 12,
               }}
               textStyle={{
                 color: getStatusColor(loan.status),
@@ -307,7 +306,7 @@ export default function LoanDetailsScreen() {
             <Text
               style={[styles.detailValue, { color: theme.colors.onSurface }]}
             >
-              {new Date(loan.date).toLocaleDateString()}
+              {new Date(loan.startDate).toLocaleDateString()}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -317,35 +316,14 @@ export default function LoanDetailsScreen() {
                 { color: theme.colors.onSurfaceVariant },
               ]}
             >
-              Due Date
+              Paid Date
             </Text>
             <Text
               style={[styles.detailValue, { color: theme.colors.onSurface }]}
             >
-              {new Date(loan.dueDate).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              {daysRemaining > 0 ? "Days Remaining" : "Days Overdue"}
-            </Text>
-            <Text
-              style={[
-                styles.detailValue,
-                {
-                  color:
-                    daysRemaining > 0
-                      ? "#4CAF50" // green for success
-                      : theme.colors.error,
-                },
-              ]}
-            >
-              {Math.abs(daysRemaining)}
+              {loan.paidDate
+                ? new Date(loan.paidDate).toLocaleDateString()
+                : "Not Paid"}
             </Text>
           </View>
         </Card.Content>
@@ -404,6 +382,158 @@ export default function LoanDetailsScreen() {
               }}
             />
           ))}
+        </Card.Content>
+      </Card>
+
+      <Card
+        style={{
+          backgroundColor: theme.colors.surface,
+          marginHorizontal: cardMargin,
+          marginTop: cardMargin,
+          marginBottom: cardMargin,
+          padding: cardPadding,
+          borderRadius: 16,
+          elevation: 3,
+        }}
+      >
+        <Card.Content>
+          <Text
+            style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
+          >
+            Other Details
+          </Text>
+          {loan.borrowerPhone && (
+            <View style={styles.detailRow}>
+              <Text
+                style={[
+                  styles.detailLabel,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Phone
+              </Text>
+              <Text
+                style={[styles.detailValue, { color: theme.colors.onSurface }]}
+              >
+                {loan.borrowerPhone}
+              </Text>
+            </View>
+          )}
+          {loan.notes && (
+            <View style={styles.detailRow}>
+              <Text
+                style={[
+                  styles.detailLabel,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Notes
+              </Text>
+              <Text
+                style={[
+                  styles.detailValue,
+                  {
+                    color: theme.colors.onSurface,
+                    flex: 1,
+                    textAlign: "right",
+                  },
+                ]}
+                numberOfLines={3}
+              >
+                {loan.notes}
+              </Text>
+            </View>
+          )}
+          {loan.collateral && (
+            <View style={styles.detailRow}>
+              <Text
+                style={[
+                  styles.detailLabel,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                Collateral
+              </Text>
+              <Text
+                style={[styles.detailValue, { color: theme.colors.onSurface }]}
+              >
+                {loan.collateral}
+              </Text>
+            </View>
+          )}
+          {loan.paymentProofUri && (
+            <View style={{ marginTop: 16 }}>
+              <Text
+                style={[
+                  styles.detailLabel,
+                  { color: theme.colors.onSurfaceVariant, marginBottom: 8 },
+                ]}
+              >
+                Payment Proof
+              </Text>
+              {/* Payment proof preview */}
+              {loan.paymentProofType?.startsWith("image") ? (
+                <View style={{ alignItems: "flex-start", marginBottom: 8 }}>
+                  <Image
+                    source={{ uri: loan.paymentProofUri || "" }}
+                    style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: "#DDD",
+                    }}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : loan.paymentProofType === "application/pdf" ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name="file-pdf-box"
+                    size={32}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={{
+                      marginLeft: 8,
+                      color: theme.colors.onSurfaceVariant,
+                    }}
+                  >
+                    {loan.paymentProofName || "Payment Proof PDF"}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                  No preview available
+                </Text>
+              )}
+              {/* Download button */}
+              <Button
+                mode="outlined"
+                icon="download"
+                onPress={async () => {
+                  if (!loan.paymentProofUri) return;
+                  const url = loan.paymentProofUri;
+                  if (Platform.OS === "web") {
+                    window.open(url, "_blank");
+                  } else {
+                    const Linking = await import("expo-linking");
+                    Linking.openURL(url);
+                  }
+                }}
+                style={{ marginTop: 4, alignSelf: "flex-start" }}
+                disabled={!loan.paymentProofUri}
+              >
+                Download Payment Proof
+              </Button>
+            </View>
+          )}
         </Card.Content>
       </Card>
 
@@ -664,7 +794,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginBottom: 24,
-    marginHorizontal: 16
+    marginHorizontal: 16,
   },
   button: {
     marginBottom: 12,

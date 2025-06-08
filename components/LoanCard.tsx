@@ -91,21 +91,29 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                   gap: 8,
                 }}
               >
-                <Text
-                  style={[
-                    {
-                      fontSize: 18,
-                      fontFamily: "Roboto-Bold",
-                      flexShrink: 1,
-                      marginRight: 8,
-                      color: theme.colors.onSurface,
-                    },
-                  ]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
                 >
-                  {loan.borrowerName}
-                </Text>
+                  <Text
+                    style={[
+                      {
+                        fontSize: 18,
+                        fontFamily: "Roboto-Bold",
+                        flexShrink: 1,
+                        marginRight: 8,
+                        color: theme.colors.onSurface,
+                      },
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {loan.borrowerName}
+                  </Text>
+                </View>
                 <Chip
                   textStyle={{
                     color:
@@ -116,24 +124,18 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                         : theme.colors.onPrimary || "#FFFFFF",
                     fontFamily: "Roboto-Medium",
                     fontSize: 13,
-                    paddingVertical: 0,
-                    paddingHorizontal: 0,
                     textAlign: "center",
-                    marginTop: -1,
-                    marginBottom: -1,
                   }}
-                  style={[
-                    {
-                      height: 28,
-                      minWidth: 60,
-                      paddingHorizontal: 2,
-                      borderRadius: 14,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: getStatusColor(loan.status),
-                      elevation: 1,
-                    },
-                  ]}
+                  style={{
+                    alignSelf: "flex-start",
+                    marginBottom: 8,
+                    backgroundColor: getStatusColor(loan.status),
+                    borderRadius: 14,
+                    height: 28,
+                    minWidth: 60,
+                    paddingHorizontal: 8,
+                    elevation: 1,
+                  }}
                   compact
                   accessibilityLabel={
                     loan.status === "paid" ? "Paid loan" : "Active loan"

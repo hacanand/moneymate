@@ -6,13 +6,16 @@ export interface Loan {
   borrowerName: string;
   amount: number;
   startDate: string;
-  dueDate: string;
+  paidDate?: string;
   status: LoanStatus;
   interestRate: number;
   interestRateType?: InterestRateType;
   borrowerPhone?: string;
   notes?: string;
   collateral?: string;
+  paymentProofUri?: string;
+  paymentProofType?: string;
+  paymentProofName?: string;
 }
 
 export interface Payment {
