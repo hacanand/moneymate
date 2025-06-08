@@ -1,4 +1,5 @@
 {
+ 
   "expo": {
     "name": "MoneyMate",
     "slug": "moneymate",
@@ -14,11 +15,13 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+     
    "androidStatusBar": {
       "translucent": false,
-      "backgroundColor": "#00000000"
+      "backgroundColor": "#ffffff"
      
     },
+     
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moneymate.app"
@@ -32,13 +35,21 @@
       "package": "com.moneymate.app"
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/icon.png",
+      "bundler": "metro",
+      "output": "server"
     },
     "scheme": "moneymate",
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      [
+        "expo-router",
+        {
+          "origin": "http://localhost:8081"
+        }
+      ]
     ]
   }
 }

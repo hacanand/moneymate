@@ -2,14 +2,14 @@
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-    Dimensions,
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    View,
-    type ListRenderItem,
+  Dimensions,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  View,
+  type ListRenderItem,
 } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,60 +23,59 @@ import type { Loan, LoanStatus } from "../../types/loan";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Mock data for loans
-const initialLoans: Loan[] = [
-  {
-    id: "1",
-    borrowerName: "John Smith",
-    amount: 5000,
-    date: "2023-05-01",
-    dueDate: "2023-06-01",
-    status: "active",
-    interestRate: 5,
-    interestRateType: "monthly",
-  },
-  {
-    id: "2",
-    borrowerName: "Sarah Johnson",
-    amount: 2500,
-    date: "2023-04-15",
-    dueDate: "2023-05-15",
-    status: "active",
-    interestRate: 5,
-    interestRateType: "monthly",
-  },
-  {
-    id: "3",
-    borrowerName: "Michael Brown",
-    amount: 10000,
-    date: "2023-03-20",
-    dueDate: "2023-09-20",
-    status: "active",
-    interestRate: 6,
-    interestRateType: "yearly",
-  },
-  {
-    id: "4",
-    borrowerName: "Emily Davis",
-    amount: 1500,
-    date: "2023-04-10",
-    dueDate: "2023-05-10",
-    status: "paid",
-    interestRate: 4,
-    interestRateType: "monthly",
-  },
-];
+// const initialLoans: Loan[] = [
+//   {
+//     id: "1",
+//     borrowerName: "John Smith",
+//     amount: 5000,
+//     date: "2023-05-01",
+//     dueDate: "2023-06-01",
+//     status: "active",
+//     interestRate: 5,
+//     interestRateType: "monthly",
+//   },
+//   {
+//     id: "2",
+//     borrowerName: "Sarah Johnson",
+//     amount: 2500,
+//     date: "2023-04-15",
+//     dueDate: "2023-05-15",
+//     status: "active",
+//     interestRate: 5,
+//     interestRateType: "monthly",
+//   },
+//   {
+//     id: "3",
+//     borrowerName: "Michael Brown",
+//     amount: 10000,
+//     date: "2023-03-20",
+//     dueDate: "2023-09-20",
+//     status: "active",
+//     interestRate: 6,
+//     interestRateType: "yearly",
+//   },
+//   {
+//     id: "4",
+//     borrowerName: "Emily Davis",
+//     amount: 1500,
+//     date: "2023-04-10",
+//     dueDate: "2023-05-10",
+//     status: "paid",
+//     interestRate: 4,
+//     interestRateType: "monthly",
+//   },
+// ];
 
 // Shared card/section padding for visual consistency
 const cardPadding = 20;
 const cardMargin = 16;
- 
 
 export default function LoanListPage() {
   const theme = useTheme();
   const router = useRouter();
   const { showAlert, AlertComponent } = useCustomAlert();
   const insets = useSafeAreaInsets();
-  const [loans, setLoans] = useState<Loan[]>(initialLoans);
+  const [loans, setLoans] = useState<Loan[]>( []); // Initialize with empty array
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
   const [loanTab, setLoanTab] = useState<"active" | "paid">("active");
@@ -88,33 +87,54 @@ export default function LoanListPage() {
   const filterModalRef = useRef<any>(null);
   const scrollRef = useRef<ScrollView>(null);
 
+  // Fetch real loans from API on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        let apiUrl = "/api/loans";
+        if (
+          typeof window !== "undefined" &&
+          window.location &&
+          window.location.hostname &&
+          window.location.hostname !== "localhost"
+        ) {
+          // Use relative path for web, absolute for device if needed
+          apiUrl = "/api/loans";
+        }
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        if (data.loans) {
+          setLoans(data.loans);
+        }
+      } catch (err) {
+        // Optionally show error
+        console.error("Failed to fetch loans", err);
+      }
+    })();
+  }, []);
+
   // Function to calculate interest earned for a loan
   const calculateInterestEarned = (loan: Loan): number => {
     const principal = loan.amount;
     const interestRate = loan.interestRate / 100;
-    const loanStartDate = new Date(loan.date);
+    // Use date as start date (since startDate is not in Loan type)
+    const startDate = new Date(loan.startDate);
     const currentDate = new Date();
-
     // Calculate duration in days from loan start to now
     const durationInDays = Math.max(
       0,
       Math.ceil(
-        (currentDate.getTime() - loanStartDate.getTime()) /
-          (1000 * 60 * 60 * 24)
+        (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
       )
     );
-
     let interest = 0;
     if (loan.interestRateType === "yearly") {
-      // Convert days to years for calculation
-      const durationInYears = durationInDays / 365;
-      interest = principal * interestRate * durationInYears;
+      // Day-wise yearly interest
+      interest = principal * interestRate * (durationInDays / 365);
     } else {
-      // Default to monthly - convert days to months for calculation
-      const durationInMonths = durationInDays / 30;
-      interest = principal * interestRate * durationInMonths;
+      // Day-wise monthly interest
+      interest = principal * interestRate * (durationInDays / 30);
     }
-
     return interest;
   };
 
@@ -278,7 +298,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
+
   searchbar: {
     flex: 1,
     marginRight: 8,

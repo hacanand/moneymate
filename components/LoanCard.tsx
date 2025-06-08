@@ -183,7 +183,7 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                       },
                     ]}
                   >
-                    {new Date(loan.date).toLocaleDateString()}
+                    {new Date(loan.startDate).toLocaleDateString()}
                   </Text>
                 </View>
               </View>

@@ -5,7 +5,7 @@ export interface Loan {
   id: string;
   borrowerName: string;
   amount: number;
-  date: string;
+  startDate: string;
   dueDate: string;
   status: LoanStatus;
   interestRate: number;

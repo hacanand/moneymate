@@ -34,13 +34,11 @@ export default function AddLoanScreen() {
   const [selectedPaymentMode, setSelectedPaymentMode] = useState("Cash");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showError, setShowError] = useState(false);
   const paymentModes = ["Cash", "Bank Transfer", "UPI", "Cheque", "Other"];
 
   const handleAddLoan = async () => {
     setLoading(true);
     setError(null);
-    setShowError(false);
     try {
       let paymentProofData = undefined;
       if (paymentProof && paymentProof.uri) {
@@ -54,8 +52,6 @@ export default function AddLoanScreen() {
         };
         reader.onerror = () => {
           setError("Failed to read payment proof file.");
-          setShowError(true);
-          setTimeout(() => setShowError(false), 4000);
           setLoading(false);
         };
         reader.readAsDataURL(blob);
@@ -65,8 +61,6 @@ export default function AddLoanScreen() {
       }
     } catch (err: any) {
       setError(err.message || "Failed to add loan. Please try again.");
-      setShowError(true);
-      setTimeout(() => setShowError(false), 4000);
       setLoading(false);
     }
   };
@@ -75,9 +69,6 @@ export default function AddLoanScreen() {
   const handleSubmitLoan = async (paymentProofData?: string) => {
     try {
       let apiUrl = "/api/add-loan";
-      if (Platform.OS !== "web") {
-        apiUrl = "http://192.168.1.100:3000/api/add-loan";
-      }
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -87,7 +78,7 @@ export default function AddLoanScreen() {
           amount,
           interestRate,
           interestRateType,
-          startDate: startDate.toISOString(), // Always send ISO string
+          startDate: startDate.toISOString(),
           notes,
           paymentMode: selectedPaymentMode,
           paymentProofUri: paymentProof?.uri,
@@ -104,26 +95,87 @@ export default function AddLoanScreen() {
         json = JSON.parse(data);
       } catch (e) {
         setError("Unexpected server response. Please try again later.");
-        setShowError(true);
-        setTimeout(() => setShowError(false), 4000);
         setLoading(false);
+        if (Platform.OS === "android") {
+          import("react-native").then(({ ToastAndroid }) => {
+            ToastAndroid.show(
+              "Unexpected server response. Please try again later.",
+              ToastAndroid.LONG
+            );
+          });
+        } else {
+          import("react-native").then(({ Alert }) => {
+            Alert.alert(
+              "Error",
+              "Unexpected server response. Please try again later.",
+              [
+                {
+                  text: "OK",
+                  style: "cancel",
+                },
+              ],
+              { cancelable: true }
+            );
+          });
+        }
         console.log("API non-JSON response:", data); // Debugging
         return;
       }
       if (!res.ok) {
         setError(json?.error || "Failed to add loan. Please try again.");
-        setShowError(true);
-        setTimeout(() => setShowError(false), 4000);
         setLoading(false);
+        if (Platform.OS === "android") {
+          import("react-native").then(({ ToastAndroid }) => {
+            ToastAndroid.show(
+              json?.error || "Failed to add loan. Please try again.",
+              ToastAndroid.LONG
+            );
+          });
+        } else {
+          import("react-native").then(({ Alert }) => {
+            Alert.alert(
+              "Error",
+              json?.error || "Failed to add loan. Please try again.",
+              [
+                {
+                  text: "OK",
+                  style: "cancel",
+                },
+              ],
+              { cancelable: true }
+            );
+          });
+        }
         console.log("API error:", json); // Debugging
         return;
       }
       setLoading(false);
-      router.back();
+      // Show toast/alert on success before navigating back
+      if (Platform.OS === "android") {
+        // Use ToastAndroid for Android
+        // @ts-ignore
+        import("react-native").then(({ ToastAndroid }) => {
+          ToastAndroid.show("Loan added successfully!", ToastAndroid.SHORT);
+          setTimeout(() => router.back(), 700);
+        });
+      } else {
+        // Use Alert for iOS/web
+        import("react-native").then(({ Alert }) => {
+          Alert.alert(
+            "Success",
+            "Loan added successfully!",
+            [
+              {
+                text: "OK",
+                onPress: () => router.back(),
+              },
+            ],
+            { cancelable: false }
+          );
+        });
+      }
     } catch (err: any) {
       setError(err.message || "Failed to add loan. Please try again.");
-      setShowError(true);
-      setTimeout(() => setShowError(false), 4000);
       setLoading(false);
       console.log("API exception:", err); // Debugging
     }
@@ -540,30 +592,7 @@ export default function AddLoanScreen() {
             />
           </View>
         </ScrollView>
-        <View>
-          {showError && error && (
-            <View
-              style={{ width: "100%", alignItems: "center", marginBottom: 8 }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.error,
-                  backgroundColor: theme.colors.error + "22",
-                  borderRadius: 8,
-                  paddingVertical: 8,
-                  paddingHorizontal: 16,
-                  textAlign: "center",
-                  fontSize: 15,
-                  fontFamily: "Roboto-Medium",
-                  maxWidth: 400,
-                }}
-                numberOfLines={3}
-                ellipsizeMode="tail"
-              >
-                {error}
-              </Text>
-            </View>
-          )}
+        
           <View
             style={[
               styles.actions,
@@ -623,7 +652,7 @@ export default function AddLoanScreen() {
               {loading ? "Saving..." : "Save Loan"}
             </Button>
           </View>
-        </View>
+         
       </View>
     </KeyboardAvoidingView>
   );
@@ -632,7 +661,7 @@ export default function AddLoanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   header: {
     flexDirection: "row",
