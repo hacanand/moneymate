@@ -1,12 +1,12 @@
 "use client";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
 import { router, useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import * as Sharing from "expo-sharing";
+import React, { useRef, useState } from "react";
 import {
   Dimensions,
-  Image, // <-- add this import
-  Platform, // <-- add this import for platform check
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -25,7 +25,6 @@ import {
 import { useCustomAlert } from "../components/CustomAlert";
 import { useTheme } from "../context/ThemeContext";
 import type { Loan, Payment, PaymentMethod } from "../types/loan";
-
 // Get screen dimensions
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -45,6 +44,7 @@ export default function LoanDetailsScreen() {
   const [reminderMessage, setReminderMessage] = useState<string>(
     `Hello ${loan?.borrowerName}, this is a reminder that your loan payment of ₹${loan?.amount} is pending.`
   );
+  const [downloading, setDownloading] = useState(false);
 
   // Modal references
   const paymentModalRef = useRef<any>(null);
@@ -133,10 +133,108 @@ export default function LoanDetailsScreen() {
         return theme.colors.onSurfaceVariant;
     }
   };
+  const handleDownloadAndOpen = async () => {
+    // Check if payment proof URI exists
+    if (!loan.paymentProofUri) {
+      showAlert({
+        title: "No File",
+        message: "No payment proof file available to download.",
+      });
+      return;
+    }
+    setDownloading(true); // Set loading state
+    try {
+      // Construct API URL to match curl command
+      const apiUrl = `http://192.168.34.53:8081${loan.paymentProofUri}`;
+      console.log("Downloading from:", apiUrl); // Debug log
 
+      // Determine file name and type
+      let fileName =
+        loan.paymentProofName || `payment-proof-${loan.paymentProofUri}`;
+      let extension = fileName.split(".").pop()?.toLowerCase();
+      let mimeType = "image/jpeg"; // Default to JPEG
+
+      // Infer extension if missing or invalid
+      if (!extension || !["pdf", "png", "jpg", "jpeg"].includes(extension)) {
+        extension = loan.paymentProofName?.endsWith(".pdf")
+          ? "pdf"
+          : loan.paymentProofName?.endsWith(".png")
+          ? "png"
+          : "jpg";
+        fileName =
+          loan.paymentProofName ||
+          `payment-proof-${loan.paymentProofUri}.${extension}`;
+      }
+
+      mimeType =
+        extension === "pdf"
+          ? "application/pdf"
+          : extension === "png"
+          ? "image/png"
+          : "image/jpeg";
+
+      // Use cacheDirectory for accessibility
+      const destUri = `${FileSystem.cacheDirectory}${fileName}`;
+      console.log("Saving to:", destUri); // Debug log
+
+      // Download the file
+      const downloadResumable = FileSystem.createDownloadResumable(
+        apiUrl,
+        destUri
+      );
+      const downloadResult = await downloadResumable.downloadAsync();
+
+      // Verify download
+      if (!downloadResult || !downloadResult.uri) {
+        throw new Error("Download failed: No file URI returned.");
+      }
+
+      const uri = downloadResult.uri;
+      console.log("File saved to:", uri); // Debug log
+
+      // Check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error("File could not be saved.");
+      }
+
+      // Check if sharing/opening is available
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        showAlert({
+          title: "Cannot Open File",
+          message: `Unable to open file. Saved to: ${uri}`,
+        });
+        return;
+      }
+
+      // Open the file with a native app (no share dialog)
+      await Sharing.shareAsync(uri, {
+        mimeType,
+        dialogTitle: `Open ${extension === "pdf" ? "PDF" : "Image"}`,
+        UTI: extension === "pdf" ? "com.adobe.pdf" : "public.image", // iOS UTI
+      });
+
+      showAlert({
+        title: "Download Complete",
+        message: `File ${fileName} downloaded and opened.`,
+      });
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      showAlert({
+        title: "Download Error",
+        message:
+          error && typeof error === "object" && "message" in error
+            ? String(error.message)
+            : "Failed to download payment proof. Please try again.",
+      });
+    } finally {
+      setDownloading(false); // Reset loading state
+    }
+  };
   return (
     <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      {/* Loan Summary Card (Professional, single source of truth) */}
+      {/* Loan Summary Card (Professional, improved layout) */}
       <Card
         style={{
           backgroundColor: theme.colors.surface,
@@ -149,16 +247,22 @@ export default function LoanDetailsScreen() {
         }}
       >
         <Card.Content>
-          <View style={styles.header}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              marginBottom: 10,
+            }}
+          >
             <Text
-              style={[
-                styles.sectionTitle,
-                {
-                  color: theme.colors.onSurface,
-                  fontSize: 20,
-                  marginBottom: 10,
-                },
-              ]}
+              style={{
+                fontSize: 20,
+                fontFamily: "Roboto-Bold",
+                color: theme.colors.onSurface,
+                flex: 1,
+                marginBottom: 0,
+              }}
             >
               Loan Summary
             </Text>
@@ -171,6 +275,7 @@ export default function LoanDetailsScreen() {
                 minWidth: 60,
                 borderRadius: 8,
                 elevation: 1,
+                marginLeft: 8,
               }}
               textStyle={{
                 color: getStatusColor(loan.status),
@@ -195,17 +300,26 @@ export default function LoanDetailsScreen() {
                 fontSize: 30,
                 fontFamily: "Roboto-Bold",
                 color: theme.colors.primary,
+                flex: 1,
               }}
             >
               ₹{loan.amount.toLocaleString()}
             </Text>
           </View>
+          {/* <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 8,
+            }}
+          > */}
           <View
             style={{
-              marginBottom: 8,
               flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              gap: 10,
               alignItems: "center",
-              gap: 8,
             }}
           >
             <Text
@@ -227,7 +341,15 @@ export default function LoanDetailsScreen() {
               {loan.id}
             </Text>
           </View>
-          <View style={{ marginBottom: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              gap: 10,
+              alignItems: "center",
+            }}
+          >
             <Text
               style={{
                 color: theme.colors.onSurfaceVariant,
@@ -247,122 +369,22 @@ export default function LoanDetailsScreen() {
               {loan.borrowerName}
             </Text>
           </View>
+          {/* <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              gap: 10,
+              alignItems: "center",
+            }}
+          > */}
           <View
             style={{
               flexDirection: "row",
-              marginBottom: 8,
               justifyContent: "space-between",
-            }}
-          >
-            <View>
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontFamily: "Roboto-Regular",
-                  fontSize: 14,
-                }}
-              >
-                Start Date
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.onSurface,
-                  fontFamily: "Roboto-Medium",
-                  fontSize: 16,
-                }}
-              >
-                {new Date(loan.startDate).toLocaleDateString()}
-              </Text>
-            </View>
-            <View>
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontFamily: "Roboto-Regular",
-                  fontSize: 14,
-                }}
-              >
-                Paid Date
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.onSurface,
-                  fontFamily: "Roboto-Medium",
-                  fontSize: 16,
-                  textAlign: "right",
-                  flex: 1,
-                }}
-              >
-                {loan.paidDate
-                  ? new Date(loan.paidDate).toLocaleDateString()
-                  : "Not Paid"}
-              </Text>
-            </View>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
               marginBottom: 8,
-              justifyContent: "space-between",
-            }}
-          >
-            <View>
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontFamily: "Roboto-Regular",
-                  fontSize: 14,
-                }}
-              >
-                Interest Rate
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.onSurface,
-                  fontFamily: "Roboto-Medium",
-                  fontSize: 16,
-                }}
-              >
-                {loan.interestRate}%{" "}
-                {loan.interestRateType
-                  ? `(${loan.interestRateType})`
-                  : "(monthly)"}
-              </Text>
-            </View>
-            <View>
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontFamily: "Roboto-Regular",
-                  fontSize: 14,
-                }}
-              >
-                Interest Earned
-              </Text>
-              <Text
-                style={{
-                  fontFamily: "Roboto-Medium",
-                  fontSize: 18,
-                  textAlign: "right",
-                  overflow: "scroll",
-                  color: theme.colors.primary,
-                }}
-              >
-                ₹{interest.toFixed(2)}
-              </Text>
-            </View>
-          </View>
-          <Divider
-            style={{
-              marginVertical: 12,
-              backgroundColor: theme.colors.surfaceVariant,
-            }}
-          />
-          <View
-            style={{
-              flexDirection: "row",
-              marginBottom: 8,
-              justifyContent: "space-between",
+              gap: 10,
+              alignItems: "center",
             }}
           >
             <Text
@@ -372,6 +394,149 @@ export default function LoanDetailsScreen() {
                 fontSize: 14,
               }}
             >
+              Start Date
+            </Text>
+            <Text
+              style={{
+                color: theme.colors.onSurface,
+                fontFamily: "Roboto-Medium",
+                fontSize: 16,
+              }}
+            >
+              {new Date(loan.startDate).toLocaleDateString()}
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              gap: 10,
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: "Roboto-Regular",
+                fontSize: 14,
+              }}
+            >
+              Paid Date
+            </Text>
+            <Text
+              style={{
+                color: theme.colors.onSurface,
+                fontFamily: "Roboto-Medium",
+                fontSize: 16,
+              }}
+            >
+              {loan.paidDate
+                ? new Date(loan.paidDate).toLocaleDateString()
+                : "Not Paid"}
+            </Text>
+          </View>
+          {/* </View> */}
+          {/* <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 8,
+            }}
+          > */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              gap: 10,
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: "Roboto-Regular",
+                fontSize: 14,
+              }}
+            >
+              Interest Rate
+            </Text>
+            <Text
+              style={{
+                color: theme.colors.onSurface,
+                fontFamily: "Roboto-Medium",
+                fontSize: 16,
+              }}
+            >
+              {loan.interestRate}%{" "}
+              {loan.interestRateType
+                ? `(${loan.interestRateType})`
+                : "(monthly)"}
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              gap: 10,
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: "Roboto-Regular",
+                fontSize: 14,
+              }}
+            >
+              Interest Earned
+            </Text>
+            <Text
+              style={{
+                fontFamily: "Roboto-Medium",
+                fontSize: 18,
+                textAlign: "right",
+                color: theme.colors.primary,
+                minWidth: 100,
+                maxWidth: "50%",
+                flexWrap: "wrap",
+              }}
+            >
+              ₹{interest.toFixed(2)}
+            </Text>
+          </View>
+          {/* </View> */}
+          <Divider
+            style={{
+              marginVertical: 12,
+              backgroundColor: theme.colors.surfaceVariant,
+            }}
+          />
+          <View
+            style={{
+              marginBottom: 8,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 10,
+              flexWrap: "wrap",
+              width: "100%",
+            }}
+          >
+            <Text
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: "Roboto-Regular",
+                fontSize: 14,
+                flex: 1,
+                minWidth: 80,
+                maxWidth: 120,
+              }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Total Amount
             </Text>
             <Text
@@ -379,7 +544,15 @@ export default function LoanDetailsScreen() {
                 color: theme.colors.primary,
                 fontFamily: "Roboto-Bold",
                 fontSize: 20,
+                textAlign: "right",
+                flex: 2,
+                minWidth: 100,
+                maxWidth: "70%",
+                flexWrap: "wrap",
               }}
+              selectable
+              numberOfLines={2}
+              ellipsizeMode="tail"
             >
               ₹{totalAmount.toFixed(2)}
             </Text>
@@ -439,10 +612,10 @@ export default function LoanDetailsScreen() {
                   color: theme.colors.onSurfaceVariant,
                   fontFamily: "Roboto-Regular",
                   fontSize: 14,
-                  flex: 1,
+                  // flex: 1,
                 }}
-                numberOfLines={1}
-                ellipsizeMode="tail"
+                // numberOfLines={1}
+                // ellipsizeMode="tail"
               >
                 Loan Purpose
               </Text>
@@ -456,7 +629,7 @@ export default function LoanDetailsScreen() {
                   flexWrap: "wrap",
                 }}
                 selectable
-                numberOfLines={2}
+                numberOfLines={3}
                 ellipsizeMode="tail"
               >
                 {loan.loanPurpose}
@@ -478,10 +651,10 @@ export default function LoanDetailsScreen() {
                   color: theme.colors.onSurfaceVariant,
                   fontFamily: "Roboto-Regular",
                   fontSize: 14,
-                  flex: 1,
+                  // flex: 1,
                 }}
-                numberOfLines={1}
-                ellipsizeMode="tail"
+                // numberOfLines={1}
+                // ellipsizeMode="tail"
               >
                 Bank Account
               </Text>
@@ -495,7 +668,7 @@ export default function LoanDetailsScreen() {
                   flexWrap: "wrap",
                 }}
                 selectable
-                numberOfLines={2}
+                numberOfLines={4}
                 ellipsizeMode="tail"
               >
                 {loan.bankAccount}
@@ -534,7 +707,7 @@ export default function LoanDetailsScreen() {
                   flexWrap: "wrap",
                 }}
                 selectable
-                numberOfLines={2}
+                numberOfLines={10}
                 ellipsizeMode="tail"
               >
                 {loan.notes}
@@ -628,140 +801,42 @@ export default function LoanDetailsScreen() {
               >
                 Payment Proof
               </Text>
-              {/* Payment proof preview */}
-              {loan.paymentProofType?.startsWith("image") ? (
-                <View style={{ alignItems: "flex-start", marginBottom: 8 }}>
-                  <Image
-                    source={{ uri: loan.paymentProofUri }}
-                    style={{
-                      width: 120,
-                      height: 120,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: "#DDD",
-                    }}
-                    resizeMode="cover"
-                    onError={() => {
-                      showAlert({
-                        title: "Preview Error",
-                        message: "Failed to load payment proof image.",
-                      });
-                    }}
-                  />
-                </View>
-              ) : loan.paymentProofType === "application/pdf" ? (
-                <TouchableOpacity
-                  onPress={async () => {
-                    if (!loan.paymentProofUri) return;
-                    const url = loan.paymentProofUri;
-                    if (Platform.OS === "web") {
-                      window.open(url, "_blank");
-                    } else {
-                      const Linking = await import("expo-linking");
-                      Linking.openURL(url);
-                    }
-                  }}
+              {/* Hide preview, show only file name and download button */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <MaterialCommunityIcons
+                  name={
+                    loan.paymentProofType === "application/pdf"
+                      ? "file-pdf-box"
+                      : "file-image"
+                  }
+                  size={32}
+                  color={theme.colors.primary}
+                />
+                <Text
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginBottom: 8,
+                    marginLeft: 8,
+                    color: theme.colors.onSurfaceVariant,
+                    textDecorationLine: "underline",
                   }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open PDF payment proof"
                 >
-                  <MaterialCommunityIcons
-                    name="file-pdf-box"
-                    size={32}
-                    color={theme.colors.primary}
-                  />
-                  <Text
-                    style={{
-                      marginLeft: 8,
-                      color: theme.colors.onSurfaceVariant,
-                      textDecorationLine: "underline",
-                    }}
-                  >
-                    {loan.paymentProofName || "Payment Proof PDF"}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={{ color: theme.colors.onSurfaceVariant }}>
-                  No preview available
+                  {loan.paymentProofName || "Payment Proof"}
                 </Text>
-              )}
-              {/* Download button */}
+              </View>
               <Button
                 mode="outlined"
-                icon="download"
-                onPress={async () => {
-                  if (!loan.paymentProofUri) {
-                    showAlert({
-                      title: "No File",
-                      message: "No payment proof file available to download.",
-                    });
-                    return;
-                  }
-                  const url = loan.paymentProofUri;
-                  if (Platform.OS === "web") {
-                    // For web, create a hidden link and click it for download
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = loan.paymentProofName || "payment-proof";
-                    link.target = "_blank";
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  } else {
-                    try {
-                      const FileSystem = await import("expo-file-system");
-                      let Sharing: any = null;
-                      try {
-                        Sharing = await import("expo-sharing");
-                      } catch (err) {
-                        // Sharing not available, fallback to alert
-                        Sharing = null;
-                      }
-                      const fileUri =
-                        FileSystem.default.cacheDirectory +
-                        (loan.paymentProofName || "payment-proof");
-                      const downloadResumable =
-                        FileSystem.default.createDownloadResumable(
-                          url,
-                          fileUri
-                        );
-                      const downloadResult =
-                        await downloadResumable.downloadAsync();
-                      const uri =
-                        downloadResult && downloadResult.uri
-                          ? downloadResult.uri
-                          : fileUri;
-                      if (
-                        Sharing &&
-                        Sharing.default &&
-                        typeof Sharing.default.isAvailableAsync ===
-                          "function" &&
-                        (await Sharing.default.isAvailableAsync())
-                      ) {
-                        await Sharing.default.shareAsync(uri);
-                      } else {
-                        showAlert({
-                          title: "Download Complete",
-                          message: `File saved to: ${uri}`,
-                        });
-                      }
-                    } catch (e) {
-                      showAlert({
-                        title: "Download Error",
-                        message:
-                          "Failed to download payment proof. Please try again.",
-                      });
-                    }
-                  }
-                }}
+                icon={downloading ? undefined : "download"}
+                loading={downloading}
+                onPress={handleDownloadAndOpen}
                 style={{ marginTop: 4, alignSelf: "flex-start" }}
-                disabled={!loan.paymentProofUri}
+                disabled={!loan.paymentProofUri || downloading}
               >
-                Download Payment Proof
+                {downloading ? "Downloading..." : "Download Payment Proof"}
               </Button>
             </View>
           ) : null}

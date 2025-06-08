@@ -121,30 +121,4 @@ export async function POST(req: Request) {
   }
 }
 
-// GET all loans with LRU cache for 10 seconds
-const loansCache = new LRUCache<string, any>({ max: 1, ttl: 1000 * 10 });
-
-export async function GET(request: Request) {
-  const cacheKey = "all-loans";
-  if (loansCache.has(cacheKey)) {
-    return new Response(JSON.stringify({ loans: loansCache.get(cacheKey) }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-  try {
-    const loans = await prisma.loan.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    loansCache.set(cacheKey, loans);
-    return new Response(JSON.stringify({ loans }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error: any) {
-    return new Response(
-      JSON.stringify({ error: error.message || "Failed to fetch loans." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
-}
+//  

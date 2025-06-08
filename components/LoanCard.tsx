@@ -124,14 +124,14 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                         : theme.colors.onPrimary || "#FFFFFF",
                     fontFamily: "Roboto-Medium",
                     fontSize: 13,
-                    textAlign: "center",
+                    // textAlign: "center",
                   }}
                   style={{
                     alignSelf: "flex-start",
                     marginBottom: 8,
                     backgroundColor: getStatusColor(loan.status),
                     borderRadius: 14,
-                    height: 28,
+                    height: 32,
                     minWidth: 60,
                     paddingHorizontal: 8,
                     elevation: 1,
@@ -226,9 +226,10 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                     <Text
                       style={[
                         {
-                          fontSize: 12,
+                          fontSize: 16,
                           fontFamily: "Roboto-Regular",
                           marginBottom: 4,
+                          fontWeight: "500",
                           color: theme.colors.onSurfaceVariant,
                           marginLeft: 6,
                         },
@@ -255,7 +256,7 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                     <Text
                       style={[
                         {
-                          fontSize: 12,
+                          fontSize: 14,
                           fontFamily: "Roboto-Regular",
                           color: theme.colors.onSurfaceVariant,
                           marginLeft: 3,
@@ -268,7 +269,7 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                     <Text
                       style={[
                         {
-                          fontSize: 12,
+                          fontSize: 14,
                           fontFamily: "Roboto-Regular",
                           color: theme.colors.onSurfaceVariant,
                           marginLeft: 2,
@@ -301,12 +302,13 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                     <Text
                       style={[
                         {
-                          fontSize: 12,
+                          fontSize: 16,
                           fontFamily: "Roboto-Regular",
                           marginBottom: 4,
                           color: theme.colors.onSurfaceVariant,
                           marginLeft: 6,
                           textAlign: "right",
+                          fontWeight: "500",
                         },
                       ]}
                     >
@@ -324,7 +326,8 @@ export const LoanCard: React.FC<LoanCardProps> = ({
                       style={[
                         {
                           fontSize: 16,
-                          fontFamily: "Roboto-Medium",
+                          fontFamily: "Roboto-Regular",
+                          textAlign: "right",
                           color: theme.colors.primary,
                         },
                       ]}
