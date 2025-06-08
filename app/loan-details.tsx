@@ -31,7 +31,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Shared card/section padding for visual consistency
 const cardPadding = 20;
-const cardMargin = 8;
+const cardMargin = 16;
 
 export default function LoanDetailsScreen() {
   const { theme } = useTheme();
@@ -92,30 +92,28 @@ export default function LoanDetailsScreen() {
     setReminderModalOpen(false);
   };
 
-  // Calculate interest based on rate type
-  const principal = loan.amount;
-  const interestRate = loan.interestRate / 100;
-  const loanStartDate = new Date(loan.startDate);
-  const loanPaidDate = loan.paidDate ? new Date(loan.paidDate) : null;
-  let durationInDays = 0;
-  if (loanPaidDate) {
-    durationInDays = Math.ceil(
-      (loanPaidDate.getTime() - loanStartDate.getTime()) / (1000 * 60 * 60 * 24)
+  // Calculate interest as in index page (day-wise, startDate to paidDate or today)
+  const calculateInterestEarned = (loan: Loan): number => {
+    const principal = loan.amount;
+    const interestRate = loan.interestRate / 100;
+    const startDate = new Date(loan.startDate);
+    const endDate = loan.paidDate ? new Date(loan.paidDate) : new Date();
+    const durationInDays = Math.max(
+      0,
+      Math.ceil(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
     );
-  }
-  const durationInMonths = durationInDays / 30;
-  const durationInYears = durationInDays / 365;
-
-  // Calculate interest based on rate type (default to monthly if not specified)
-  let interest: number = 0;
-  if (loanPaidDate) {
     if (loan.interestRateType === "yearly") {
-      interest = principal * interestRate * durationInYears;
+      return principal * interestRate * (durationInDays / 365);
     } else {
-      interest = principal * interestRate * durationInMonths;
+      return principal * interestRate * (durationInDays / 30);
     }
-  }
-  const totalAmount = principal + interest;
+  };
+
+  // Use the above for interest and totalAmount
+  const interest = calculateInterestEarned(loan);
+  const totalAmount = loan.amount + interest;
 
   // Mock payment history
   const paymentHistory: Payment[] = [
@@ -138,6 +136,7 @@ export default function LoanDetailsScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      {/* Loan Summary Card (Professional, single source of truth) */}
       <Card
         style={{
           backgroundColor: theme.colors.surface,
@@ -151,181 +150,397 @@ export default function LoanDetailsScreen() {
       >
         <Card.Content>
           <View style={styles.header}>
-            <View>
-              <Text
-                style={[styles.borrowerName, { color: theme.colors.onSurface }]}
-              >
-                {loan.borrowerName}
-              </Text>
-              <Text
-                style={[
-                  styles.loanId,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Loan ID: {loan.id}
-              </Text>
-            </View>
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  color: theme.colors.onSurface,
+                  fontSize: 20,
+                  marginBottom: 10,
+                },
+              ]}
+            >
+              Loan Summary
+            </Text>
             <Chip
               mode="outlined"
               style={{
                 borderColor: getStatusColor(loan.status),
-                marginBottom: 20,
-                marginRight: 12,
+                backgroundColor: "#00000000",
+                height: 32,
+                minWidth: 60,
+                borderRadius: 8,
+                elevation: 1,
               }}
               textStyle={{
                 color: getStatusColor(loan.status),
                 fontFamily: "Roboto-Medium",
+                fontSize: 15,
+                fontWeight: "700",
+                textAlign: "center",
               }}
             >
               {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
             </Chip>
           </View>
-        </Card.Content>
-      </Card>
-
-      <Card
-        style={{
-          backgroundColor: theme.colors.surface,
-          marginHorizontal: cardMargin,
-          marginTop: cardMargin,
-          marginBottom: cardMargin,
-          padding: cardPadding,
-          borderRadius: 16,
-          elevation: 3,
-        }}
-      >
-        <Card.Content>
-          <Text
-            style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
           >
-            Loan Details
-          </Text>
-          <View style={styles.detailRow}>
             <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
+              style={{
+                fontSize: 30,
+                fontFamily: "Roboto-Bold",
+                color: theme.colors.primary,
+              }}
             >
-              Principal Amount
-            </Text>
-            <Text
-              style={[styles.detailValue, { color: theme.colors.onSurface }]}
-            >
-              ₹{principal.toLocaleString()}
+              ₹{loan.amount.toLocaleString()}
             </Text>
           </View>
-          <View style={styles.detailRow}>
+          <View
+            style={{
+              marginBottom: 8,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
             <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: "Roboto-Regular",
+                fontSize: 14,
+              }}
             >
-              Interest Rate
+              Loan ID
             </Text>
             <Text
-              style={[styles.detailValue, { color: theme.colors.onSurface }]}
+              style={{
+                color: theme.colors.onSurface,
+                fontFamily: "Roboto-Medium",
+                fontSize: 16,
+              }}
             >
-              {loan.interestRate}%{" "}
-              {loan.interestRateType
-                ? `(${loan.interestRateType})`
-                : "(monthly)"}
+              {loan.id}
             </Text>
           </View>
-          <View style={styles.detailRow}>
+          <View style={{ marginBottom: 8 }}>
             <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: "Roboto-Regular",
+                fontSize: 14,
+              }}
             >
-              Interest Amount
+              Borrower
             </Text>
             <Text
-              style={[styles.detailValue, { color: theme.colors.onSurface }]}
+              style={{
+                color: theme.colors.onSurface,
+                fontFamily: "Roboto-Medium",
+                fontSize: 16,
+              }}
             >
-              ₹{interest.toFixed(2)}
+              {loan.borrowerName}
             </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              marginBottom: 8,
+              justifyContent: "space-between",
+            }}
+          >
+            <View>
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontFamily: "Roboto-Regular",
+                  fontSize: 14,
+                }}
+              >
+                Start Date
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.onSurface,
+                  fontFamily: "Roboto-Medium",
+                  fontSize: 16,
+                }}
+              >
+                {new Date(loan.startDate).toLocaleDateString()}
+              </Text>
+            </View>
+            <View>
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontFamily: "Roboto-Regular",
+                  fontSize: 14,
+                }}
+              >
+                Paid Date
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.onSurface,
+                  fontFamily: "Roboto-Medium",
+                  fontSize: 16,
+                  textAlign: "right",
+                  flex: 1,
+                }}
+              >
+                {loan.paidDate
+                  ? new Date(loan.paidDate).toLocaleDateString()
+                  : "Not Paid"}
+              </Text>
+            </View>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              marginBottom: 8,
+              justifyContent: "space-between",
+            }}
+          >
+            <View>
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontFamily: "Roboto-Regular",
+                  fontSize: 14,
+                }}
+              >
+                Interest Rate
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.onSurface,
+                  fontFamily: "Roboto-Medium",
+                  fontSize: 16,
+                }}
+              >
+                {loan.interestRate}%{" "}
+                {loan.interestRateType
+                  ? `(${loan.interestRateType})`
+                  : "(monthly)"}
+              </Text>
+            </View>
+            <View>
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontFamily: "Roboto-Regular",
+                  fontSize: 14,
+                }}
+              >
+                Interest Earned
+              </Text>
+              <Text
+                style={{
+                  fontFamily: "Roboto-Medium",
+                  fontSize: 18,
+                  textAlign: "right",
+                  overflow: "scroll",
+                  color: theme.colors.primary,
+                }}
+              >
+                ₹{interest.toFixed(2)}
+              </Text>
+            </View>
           </View>
           <Divider
-            style={[
-              styles.divider,
-              { backgroundColor: theme.colors.surfaceVariant },
-            ]}
+            style={{
+              marginVertical: 12,
+              backgroundColor: theme.colors.surfaceVariant,
+            }}
           />
-          <View style={styles.detailRow}>
+          <View
+            style={{
+              flexDirection: "row",
+              marginBottom: 8,
+              justifyContent: "space-between",
+            }}
+          >
             <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                fontFamily: "Roboto-Regular",
+                fontSize: 14,
+              }}
             >
               Total Amount
             </Text>
             <Text
-              style={[
-                styles.detailValue,
-                styles.totalAmount,
-                { color: theme.colors.primary },
-              ]}
+              style={{
+                color: theme.colors.primary,
+                fontFamily: "Roboto-Bold",
+                fontSize: 20,
+              }}
             >
               ₹{totalAmount.toFixed(2)}
             </Text>
           </View>
-        </Card.Content>
-      </Card>
-
-      <Card
-        style={{
-          backgroundColor: theme.colors.surface,
-          marginHorizontal: cardMargin,
-          marginTop: cardMargin,
-          marginBottom: cardMargin,
-          padding: cardPadding,
-          borderRadius: 16,
-          elevation: 3,
-        }}
-      >
-        <Card.Content>
-          <Text
-            style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
-          >
-            Loan Schedule
-          </Text>
-          <View style={styles.detailRow}>
-            <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
+          {/* Details fields with wrapping and truncation for overflow */}
+          {loan.borrowerPhone && (
+            <View
+              style={{
+                marginBottom: 8,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 8,
+              }}
             >
-              Start Date
-            </Text>
-            <Text
-              style={[styles.detailValue, { color: theme.colors.onSurface }]}
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontFamily: "Roboto-Regular",
+                  fontSize: 14,
+                  flex: 1,
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Phone
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.onSurface,
+                  fontFamily: "Roboto-Medium",
+                  fontSize: 16,
+                  flex: 2,
+                  textAlign: "right",
+                  flexWrap: "wrap",
+                }}
+                selectable
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {loan.borrowerPhone}
+              </Text>
+            </View>
+          )}
+          {loan.loanPurpose && (
+            <View
+              style={{
+                marginBottom: 8,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 8,
+              }}
             >
-              {new Date(loan.startDate).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontFamily: "Roboto-Regular",
+                  fontSize: 14,
+                  flex: 1,
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Loan Purpose
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.onSurface,
+                  fontFamily: "Roboto-Medium",
+                  fontSize: 16,
+                  flex: 2,
+                  textAlign: "right",
+                  flexWrap: "wrap",
+                }}
+                selectable
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {loan.loanPurpose}
+              </Text>
+            </View>
+          )}
+          {loan.bankAccount && (
+            <View
+              style={{
+                marginBottom: 8,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 8,
+              }}
             >
-              Paid Date
-            </Text>
-            <Text
-              style={[styles.detailValue, { color: theme.colors.onSurface }]}
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontFamily: "Roboto-Regular",
+                  fontSize: 14,
+                  flex: 1,
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Bank Account
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.onSurface,
+                  fontFamily: "Roboto-Medium",
+                  fontSize: 16,
+                  flex: 2,
+                  textAlign: "right",
+                  flexWrap: "wrap",
+                }}
+                selectable
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {loan.bankAccount}
+              </Text>
+            </View>
+          )}
+          {loan.notes && (
+            <View
+              style={{
+                marginBottom: 8,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 8,
+              }}
             >
-              {loan.paidDate
-                ? new Date(loan.paidDate).toLocaleDateString()
-                : "Not Paid"}
-            </Text>
-          </View>
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontFamily: "Roboto-Regular",
+                  fontSize: 14,
+                  flex: 1,
+                }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Notes
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.onSurface,
+                  fontFamily: "Roboto-Medium",
+                  fontSize: 16,
+                  flex: 2,
+                  textAlign: "right",
+                  flexWrap: "wrap",
+                }}
+                selectable
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {loan.notes}
+              </Text>
+            </View>
+          )}
         </Card.Content>
       </Card>
 
@@ -402,66 +617,8 @@ export default function LoanDetailsScreen() {
           >
             Other Details
           </Text>
-          {loan.borrowerPhone && (
-            <View style={styles.detailRow}>
-              <Text
-                style={[
-                  styles.detailLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Phone
-              </Text>
-              <Text
-                style={[styles.detailValue, { color: theme.colors.onSurface }]}
-              >
-                {loan.borrowerPhone}
-              </Text>
-            </View>
-          )}
-          {loan.notes && (
-            <View style={styles.detailRow}>
-              <Text
-                style={[
-                  styles.detailLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Notes
-              </Text>
-              <Text
-                style={[
-                  styles.detailValue,
-                  {
-                    color: theme.colors.onSurface,
-                    flex: 1,
-                    textAlign: "right",
-                  },
-                ]}
-                numberOfLines={3}
-              >
-                {loan.notes}
-              </Text>
-            </View>
-          )}
-          {loan.collateral && (
-            <View style={styles.detailRow}>
-              <Text
-                style={[
-                  styles.detailLabel,
-                  { color: theme.colors.onSurfaceVariant },
-                ]}
-              >
-                Collateral
-              </Text>
-              <Text
-                style={[styles.detailValue, { color: theme.colors.onSurface }]}
-              >
-                {loan.collateral}
-              </Text>
-            </View>
-          )}
-          {loan.paymentProofUri && (
+
+          {loan.paymentProofUri ? (
             <View style={{ marginTop: 16 }}>
               <Text
                 style={[
@@ -475,7 +632,7 @@ export default function LoanDetailsScreen() {
               {loan.paymentProofType?.startsWith("image") ? (
                 <View style={{ alignItems: "flex-start", marginBottom: 8 }}>
                   <Image
-                    source={{ uri: loan.paymentProofUri || "" }}
+                    source={{ uri: loan.paymentProofUri }}
                     style={{
                       width: 120,
                       height: 120,
@@ -484,15 +641,33 @@ export default function LoanDetailsScreen() {
                       borderColor: "#DDD",
                     }}
                     resizeMode="cover"
+                    onError={() => {
+                      showAlert({
+                        title: "Preview Error",
+                        message: "Failed to load payment proof image.",
+                      });
+                    }}
                   />
                 </View>
               ) : loan.paymentProofType === "application/pdf" ? (
-                <View
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (!loan.paymentProofUri) return;
+                    const url = loan.paymentProofUri;
+                    if (Platform.OS === "web") {
+                      window.open(url, "_blank");
+                    } else {
+                      const Linking = await import("expo-linking");
+                      Linking.openURL(url);
+                    }
+                  }}
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
                     marginBottom: 8,
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open PDF payment proof"
                 >
                   <MaterialCommunityIcons
                     name="file-pdf-box"
@@ -503,11 +678,12 @@ export default function LoanDetailsScreen() {
                     style={{
                       marginLeft: 8,
                       color: theme.colors.onSurfaceVariant,
+                      textDecorationLine: "underline",
                     }}
                   >
                     {loan.paymentProofName || "Payment Proof PDF"}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ) : (
                 <Text style={{ color: theme.colors.onSurfaceVariant }}>
                   No preview available
@@ -518,13 +694,68 @@ export default function LoanDetailsScreen() {
                 mode="outlined"
                 icon="download"
                 onPress={async () => {
-                  if (!loan.paymentProofUri) return;
+                  if (!loan.paymentProofUri) {
+                    showAlert({
+                      title: "No File",
+                      message: "No payment proof file available to download.",
+                    });
+                    return;
+                  }
                   const url = loan.paymentProofUri;
                   if (Platform.OS === "web") {
-                    window.open(url, "_blank");
+                    // For web, create a hidden link and click it for download
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = loan.paymentProofName || "payment-proof";
+                    link.target = "_blank";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                   } else {
-                    const Linking = await import("expo-linking");
-                    Linking.openURL(url);
+                    try {
+                      const FileSystem = await import("expo-file-system");
+                      let Sharing: any = null;
+                      try {
+                        Sharing = await import("expo-sharing");
+                      } catch (err) {
+                        // Sharing not available, fallback to alert
+                        Sharing = null;
+                      }
+                      const fileUri =
+                        FileSystem.default.cacheDirectory +
+                        (loan.paymentProofName || "payment-proof");
+                      const downloadResumable =
+                        FileSystem.default.createDownloadResumable(
+                          url,
+                          fileUri
+                        );
+                      const downloadResult =
+                        await downloadResumable.downloadAsync();
+                      const uri =
+                        downloadResult && downloadResult.uri
+                          ? downloadResult.uri
+                          : fileUri;
+                      if (
+                        Sharing &&
+                        Sharing.default &&
+                        typeof Sharing.default.isAvailableAsync ===
+                          "function" &&
+                        (await Sharing.default.isAvailableAsync())
+                      ) {
+                        await Sharing.default.shareAsync(uri);
+                      } else {
+                        showAlert({
+                          title: "Download Complete",
+                          message: `File saved to: ${uri}`,
+                        });
+                      }
+                    } catch (e) {
+                      showAlert({
+                        title: "Download Error",
+                        message:
+                          "Failed to download payment proof. Please try again.",
+                      });
+                    }
                   }
                 }}
                 style={{ marginTop: 4, alignSelf: "flex-start" }}
@@ -533,7 +764,7 @@ export default function LoanDetailsScreen() {
                 Download Payment Proof
               </Button>
             </View>
-          )}
+          ) : null}
         </Card.Content>
       </Card>
 

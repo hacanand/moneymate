@@ -12,7 +12,9 @@ export interface Loan {
   interestRateType?: InterestRateType;
   borrowerPhone?: string;
   notes?: string;
-  collateral?: string;
+  loanPurpose?: string;
+  bankAccount?: string;
+  paymentMode?: string;
   paymentProofUri?: string;
   paymentProofType?: string;
   paymentProofName?: string;
