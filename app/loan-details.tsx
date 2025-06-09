@@ -1,28 +1,18 @@
 "use client";
 
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useRef, useState } from "react";
-import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import Modal from "react-native-modalbox";
-import {
-  Button,
-  Card,
-  Chip,
-  Divider,
-  List,
-  Text,
-  TextInput,
-} from "react-native-paper";
+import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
+import { Button } from "react-native-paper";
 import { useCustomAlert } from "../components/CustomAlert";
+import { FullPaymentModal } from "../components/FullPaymentModal";
+import { LoanSummaryCard } from "../components/LoanSummaryCard";
+import { PaymentHistorySection } from "../components/PaymentHistorySection";
+import { PaymentModal } from "../components/PaymentModal";
+import { PaymentProofSection } from "../components/PaymentProofSection";
+import { ReminderModal } from "../components/ReminderModal";
 import { useTheme } from "../context/ThemeContext";
 import type { Loan, Payment, PaymentMethod } from "../types/loan";
 // Get screen dimensions
@@ -30,7 +20,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Shared card/section padding for visual consistency
 const cardPadding = 20;
-const cardMargin = 16;
+const cardMargin = 8;
+const cardHMargin = 16;
 
 export default function LoanDetailsScreen() {
   const { theme } = useTheme();
@@ -39,8 +30,11 @@ export default function LoanDetailsScreen() {
 
   const [paymentModalOpen, setPaymentModalOpen] = useState<boolean>(false);
   const [reminderModalOpen, setReminderModalOpen] = useState<boolean>(false);
+  const [fullPaymentModalOpen, setFullPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [fullPaymentMethod, setFullPaymentMethod] =
+    useState<PaymentMethod>("cash");
   const [reminderMessage, setReminderMessage] = useState<string>(
     `Hello ${loan?.borrowerName}, this is a reminder that your loan payment of ₹${loan?.amount} is pending.`
   );
@@ -81,6 +75,18 @@ export default function LoanDetailsScreen() {
     setPaymentModalOpen(false);
     setPaymentAmount("");
     setPaymentMethod("cash");
+  };
+
+  const handleFullPayment = (): void => {
+    // In a real app, you would process the full payment here
+    showAlert({
+      title: "Full Payment Recorded",
+      message: `Full payment of ₹${totalAmount.toLocaleString()} has been recorded via ${
+        fullPaymentMethod.charAt(0).toUpperCase() + fullPaymentMethod.slice(1)
+      }.`,
+    });
+    setFullPaymentModalOpen(false);
+    setFullPaymentMethod("cash");
   };
 
   const handleSendReminder = (): void => {
@@ -234,625 +240,45 @@ export default function LoanDetailsScreen() {
   };
   return (
     <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      {/* Loan Summary Card (Professional, improved layout) */}
-      <Card
-        style={{
-          backgroundColor: theme.colors.surface,
-          marginHorizontal: cardMargin,
-          marginTop: cardMargin,
-          marginBottom: cardMargin,
-          padding: cardPadding,
-          borderRadius: 16,
-          elevation: 3,
-        }}
-      >
-        <Card.Content>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: 10,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 20,
-                fontFamily: "Roboto-Bold",
-                color: theme.colors.onSurface,
-                flex: 1,
-                marginBottom: 0,
-              }}
-            >
-              Loan Summary
-            </Text>
-            <Chip
-              mode="outlined"
-              style={{
-                borderColor: getStatusColor(loan.status),
-                backgroundColor: "#00000000",
-                height: 32,
-                minWidth: 60,
-                borderRadius: 8,
-                elevation: 1,
-                marginLeft: 8,
-              }}
-              textStyle={{
-                color: getStatusColor(loan.status),
-                fontFamily: "Roboto-Medium",
-                fontSize: 15,
-                fontWeight: "700",
-                textAlign: "center",
-              }}
-            >
-              {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
-            </Chip>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 16,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 30,
-                fontFamily: "Roboto-Bold",
-                color: theme.colors.primary,
-                flex: 1,
-              }}
-            >
-              ₹{loan.amount.toLocaleString()}
-            </Text>
-          </View>
-          {/* <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-            }}
-          > */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-              gap: 10,
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                color: theme.colors.onSurfaceVariant,
-                fontFamily: "Roboto-Regular",
-                fontSize: 14,
-              }}
-            >
-              Loan ID
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.onSurface,
-                fontFamily: "Roboto-Medium",
-                fontSize: 16,
-              }}
-            >
-              {loan.id}
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-              gap: 10,
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                color: theme.colors.onSurfaceVariant,
-                fontFamily: "Roboto-Regular",
-                fontSize: 14,
-              }}
-            >
-              Borrower
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.onSurface,
-                fontFamily: "Roboto-Medium",
-                fontSize: 16,
-              }}
-            >
-              {loan.borrowerName}
-            </Text>
-          </View>
-          {/* <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-              gap: 10,
-              alignItems: "center",
-            }}
-          > */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-              gap: 10,
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                color: theme.colors.onSurfaceVariant,
-                fontFamily: "Roboto-Regular",
-                fontSize: 14,
-              }}
-            >
-              Start Date
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.onSurface,
-                fontFamily: "Roboto-Medium",
-                fontSize: 16,
-              }}
-            >
-              {new Date(loan.startDate).toLocaleDateString()}
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-              gap: 10,
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                color: theme.colors.onSurfaceVariant,
-                fontFamily: "Roboto-Regular",
-                fontSize: 14,
-              }}
-            >
-              Paid Date
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.onSurface,
-                fontFamily: "Roboto-Medium",
-                fontSize: 16,
-              }}
-            >
-              {loan.paidDate
-                ? new Date(loan.paidDate).toLocaleDateString()
-                : "Not Paid"}
-            </Text>
-          </View>
-          {/* </View> */}
-          {/* <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-            }}
-          > */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-              gap: 10,
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                color: theme.colors.onSurfaceVariant,
-                fontFamily: "Roboto-Regular",
-                fontSize: 14,
-              }}
-            >
-              Interest Rate
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.onSurface,
-                fontFamily: "Roboto-Medium",
-                fontSize: 16,
-              }}
-            >
-              {loan.interestRate}%{" "}
-              {loan.interestRateType
-                ? `(${loan.interestRateType})`
-                : "(monthly)"}
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 8,
-              gap: 10,
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                color: theme.colors.onSurfaceVariant,
-                fontFamily: "Roboto-Regular",
-                fontSize: 14,
-              }}
-            >
-              Interest Earned
-            </Text>
-            <Text
-              style={{
-                fontFamily: "Roboto-Medium",
-                fontSize: 18,
-                textAlign: "right",
-                color: theme.colors.primary,
-                minWidth: 100,
-                maxWidth: "50%",
-                flexWrap: "wrap",
-              }}
-            >
-              ₹{interest.toFixed(2)}
-            </Text>
-          </View>
-          {/* </View> */}
-          <Divider
-            style={{
-              marginVertical: 12,
-              backgroundColor: theme.colors.surfaceVariant,
-            }}
-          />
-          <View
-            style={{
-              marginBottom: 8,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: 10,
-              flexWrap: "wrap",
-              width: "100%",
-            }}
-          >
-            <Text
-              style={{
-                color: theme.colors.onSurfaceVariant,
-                fontFamily: "Roboto-Regular",
-                fontSize: 14,
-                flex: 1,
-                minWidth: 80,
-                maxWidth: 120,
-              }}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              Total Amount
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.primary,
-                fontFamily: "Roboto-Bold",
-                fontSize: 20,
-                textAlign: "right",
-                flex: 2,
-                minWidth: 100,
-                maxWidth: "70%",
-                flexWrap: "wrap",
-              }}
-              selectable
-              numberOfLines={2}
-              ellipsizeMode="tail"
-            >
-              ₹{totalAmount.toFixed(2)}
-            </Text>
-          </View>
-          {/* Details fields with wrapping and truncation for overflow */}
-          {loan.borrowerPhone && (
-            <View
-              style={{
-                marginBottom: 8,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontFamily: "Roboto-Regular",
-                  fontSize: 14,
-                  flex: 1,
-                }}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                Phone
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.onSurface,
-                  fontFamily: "Roboto-Medium",
-                  fontSize: 16,
-                  flex: 2,
-                  textAlign: "right",
-                  flexWrap: "wrap",
-                }}
-                selectable
-                numberOfLines={2}
-                ellipsizeMode="tail"
-              >
-                {loan.borrowerPhone}
-              </Text>
-            </View>
-          )}
-          {loan.loanPurpose && (
-            <View
-              style={{
-                marginBottom: 8,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontFamily: "Roboto-Regular",
-                  fontSize: 14,
-                  // flex: 1,
-                }}
-                // numberOfLines={1}
-                // ellipsizeMode="tail"
-              >
-                Loan Purpose
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.onSurface,
-                  fontFamily: "Roboto-Medium",
-                  fontSize: 16,
-                  flex: 2,
-                  textAlign: "right",
-                  flexWrap: "wrap",
-                }}
-                selectable
-                numberOfLines={3}
-                ellipsizeMode="tail"
-              >
-                {loan.loanPurpose}
-              </Text>
-            </View>
-          )}
-          {loan.bankAccount && (
-            <View
-              style={{
-                marginBottom: 8,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontFamily: "Roboto-Regular",
-                  fontSize: 14,
-                  // flex: 1,
-                }}
-                // numberOfLines={1}
-                // ellipsizeMode="tail"
-              >
-                Bank Account
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.onSurface,
-                  fontFamily: "Roboto-Medium",
-                  fontSize: 16,
-                  flex: 2,
-                  textAlign: "right",
-                  flexWrap: "wrap",
-                }}
-                selectable
-                numberOfLines={4}
-                ellipsizeMode="tail"
-              >
-                {loan.bankAccount}
-              </Text>
-            </View>
-          )}
-          {loan.notes && (
-            <View
-              style={{
-                marginBottom: 8,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontFamily: "Roboto-Regular",
-                  fontSize: 14,
-                  flex: 1,
-                }}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                Notes
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.onSurface,
-                  fontFamily: "Roboto-Medium",
-                  fontSize: 16,
-                  flex: 2,
-                  textAlign: "right",
-                  flexWrap: "wrap",
-                }}
-                selectable
-                numberOfLines={10}
-                ellipsizeMode="tail"
-              >
-                {loan.notes}
-              </Text>
-            </View>
-          )}
-        </Card.Content>
-      </Card>
-
-      <Card
-        style={{
-          backgroundColor: theme.colors.surface,
-          marginHorizontal: cardMargin,
-          marginTop: cardMargin,
-          marginBottom: cardMargin,
-          padding: cardPadding,
-          borderRadius: 16,
-          elevation: 3,
-        }}
-      >
-        <Card.Content>
-          <View style={styles.paymentHeaderRow}>
-            <Text
-              style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
-            >
-              Payment History
-            </Text>
-            <TouchableOpacity onPress={() => setPaymentModalOpen(true)}>
-              <MaterialCommunityIcons
-                name="plus-circle"
-                size={24}
-                color={theme.colors.primary}
-              />
-            </TouchableOpacity>
-          </View>
-          {paymentHistory.map((payment) => (
-            <List.Item
-              key={payment.id}
-              title={`₹${payment.amount.toLocaleString()}`}
-              description={`Method: ${payment.method}`}
-              right={(props) => (
-                <Text
-                  {...props}
-                  style={[
-                    styles.paymentDate,
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                >
-                  {new Date(payment.date).toLocaleDateString()}
-                </Text>
-              )}
-              style={styles.paymentItem}
-              titleStyle={{
-                fontFamily: "Roboto-Medium",
-                color: theme.colors.onSurface,
-              }}
-              descriptionStyle={{
-                fontFamily: "Roboto-Regular",
-                color: theme.colors.onSurfaceVariant,
-              }}
-            />
-          ))}
-        </Card.Content>
-      </Card>
-
-      <Card
-        style={{
-          backgroundColor: theme.colors.surface,
-          marginHorizontal: cardMargin,
-          marginTop: cardMargin,
-          marginBottom: cardMargin,
-          padding: cardPadding,
-          borderRadius: 16,
-          elevation: 3,
-        }}
-      >
-        <Card.Content>
-          <Text
-            style={[styles.sectionTitle, { color: theme.colors.onSurface }]}
-          >
-            Other Details
-          </Text>
-
-          {loan.paymentProofUri ? (
-            <View style={{ marginTop: 16 }}>
-              <Text
-                style={[
-                  styles.detailLabel,
-                  { color: theme.colors.onSurfaceVariant, marginBottom: 8 },
-                ]}
-              >
-                Payment Proof
-              </Text>
-              {/* Hide preview, show only file name and download button */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginBottom: 8,
-                }}
-              >
-                <MaterialCommunityIcons
-                  name={
-                    loan.paymentProofType === "application/pdf"
-                      ? "file-pdf-box"
-                      : "file-image"
-                  }
-                  size={32}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  style={{
-                    marginLeft: 8,
-                    color: theme.colors.onSurfaceVariant,
-                    textDecorationLine: "underline",
-                  }}
-                >
-                  {loan.paymentProofName || "Payment Proof"}
-                </Text>
-              </View>
-              <Button
-                mode="outlined"
-                icon={downloading ? undefined : "download"}
-                loading={downloading}
-                onPress={handleDownloadAndOpen}
-                style={{ marginTop: 4, alignSelf: "flex-start" }}
-                disabled={!loan.paymentProofUri || downloading}
-              >
-                {downloading ? "Downloading..." : "Download Payment Proof"}
-              </Button>
-            </View>
-          ) : null}
-        </Card.Content>
-      </Card>
-
+      <LoanSummaryCard
+        loan={loan}
+        interest={interest}
+        totalAmount={totalAmount}
+        getStatusColor={getStatusColor}
+        theme={theme}
+      />
+      <PaymentHistorySection
+        paymentHistory={paymentHistory}
+        onAddPayment={() => setPaymentModalOpen(true)}
+        theme={theme}
+      />
+      <PaymentProofSection
+        paymentProofUri={loan.paymentProofUri}
+        paymentProofName={loan.paymentProofName}
+        paymentProofType={loan.paymentProofType}
+        downloading={downloading}
+        onDownload={handleDownloadAndOpen}
+        theme={theme}
+      />
       <View style={styles.buttonContainer}>
         <Button
-          mode="contained"
+          mode="outlined"
           onPress={() => setPaymentModalOpen(true)}
-          style={[styles.button, styles.paymentButton]}
+          style={styles.button}
           icon="cash-plus"
         >
           Record Payment
         </Button>
         <Button
+          mode="contained"
+          onPress={() => setFullPaymentModalOpen(true)}
+          style={[styles.button, styles.paymentButton]}
+          // textColor={theme.colors}
+          icon="cash"
+        >
+          Full Loan Payment
+        </Button>
+        {/* <Button
           mode="outlined"
           onPress={() => setReminderModalOpen(true)}
           style={styles.button}
@@ -860,188 +286,47 @@ export default function LoanDetailsScreen() {
           textColor={theme.colors.primary}
         >
           Send Reminder
-        </Button>
+        </Button> */}
       </View>
-
-      {/* Payment Modal */}
-      <Modal
-        ref={paymentModalRef}
-        style={[styles.modal, { backgroundColor: theme.colors.surface }]}
-        position="center"
+      <PaymentModal
         isOpen={paymentModalOpen}
-        onClosed={() => setPaymentModalOpen(false)}
-        backdropPressToClose
-        swipeToClose
-      >
-        <View style={styles.modalHeader}>
-          <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-            Record Payment
-          </Text>
-          <TouchableOpacity onPress={() => setPaymentModalOpen(false)}>
-            <MaterialCommunityIcons
-              name="close"
-              size={24}
-              color={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.modalContent}>
-          <TextInput
-            label="Payment Amount"
-            value={paymentAmount}
-            onChangeText={setPaymentAmount}
-            keyboardType="numeric"
-            mode="outlined"
-            style={[styles.input, { backgroundColor: theme.colors.surface }]}
-            left={
-              <TextInput.Affix
-                text="₹"
-                textStyle={{ color: theme.colors.onSurfaceVariant }}
-              />
-            }
-            textColor={theme.colors.onSurface}
-          />
-
-          <Text style={[styles.methodLabel, { color: theme.colors.onSurface }]}>
-            Payment Method
-          </Text>
-          <View style={styles.methodOptions}>
-            <Chip
-              mode={paymentMethod === "cash" ? "flat" : "outlined"}
-              selected={paymentMethod === "cash"}
-              onPress={() => setPaymentMethod("cash")}
-              style={[
-                styles.methodChip,
-                paymentMethod === "cash" && styles.selectedChip,
-              ]}
-              textStyle={
-                paymentMethod === "cash"
-                  ? styles.selectedChipText
-                  : { color: theme.colors.onSurface }
-              }
-              icon="cash"
-              selectedColor="#FFFFFF"
-            >
-              Cash
-            </Chip>
-            <Chip
-              mode={paymentMethod === "bank transfer" ? "flat" : "outlined"}
-              selected={paymentMethod === "bank transfer"}
-              onPress={() => setPaymentMethod("bank transfer")}
-              style={[
-                styles.methodChip,
-                paymentMethod === "bank transfer" && styles.selectedChip,
-              ]}
-              textStyle={
-                paymentMethod === "bank transfer"
-                  ? styles.selectedChipText
-                  : { color: theme.colors.onSurface }
-              }
-              icon="bank"
-              selectedColor="#FFFFFF"
-            >
-              Bank Transfer
-            </Chip>
-            <Chip
-              mode={paymentMethod === "check" ? "flat" : "outlined"}
-              selected={paymentMethod === "check"}
-              onPress={() => setPaymentMethod("check")}
-              style={[
-                styles.methodChip,
-                paymentMethod === "check" && styles.selectedChip,
-              ]}
-              textStyle={
-                paymentMethod === "check"
-                  ? styles.selectedChipText
-                  : { color: theme.colors.onSurface }
-              }
-              icon="checkbox-marked"
-              selectedColor="#FFFFFF"
-            >
-              Check
-            </Chip>
-          </View>
-        </View>
-
-        <View style={styles.modalActions}>
-          <Button
-            mode="outlined"
-            onPress={() => setPaymentModalOpen(false)}
-            style={styles.cancelButton}
-            textColor={theme.colors.primary}
-          >
-            Cancel
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handlePayment}
-            style={styles.saveButton}
-          >
-            Confirm
-          </Button>
-        </View>
-      </Modal>
-
-      {/* Reminder Modal */}
-      <Modal
-        ref={reminderModalRef}
-        style={[styles.modal, { backgroundColor: theme.colors.surface }]}
-        position="center"
+        onClose={() => setPaymentModalOpen(false)}
+        paymentAmount={paymentAmount}
+        setPaymentAmount={setPaymentAmount}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={(v: string) => setPaymentMethod(v as PaymentMethod)}
+        onConfirm={handlePayment}
+        theme={theme}
+      />
+      <FullPaymentModal
+        isOpen={fullPaymentModalOpen}
+        onClose={() => setFullPaymentModalOpen(false)}
+        amountDue={totalAmount}
+        paymentMethod={fullPaymentMethod}
+        setPaymentMethod={(v: string) =>
+          setFullPaymentMethod(v as PaymentMethod)
+        }
+        onConfirm={({ amountPaid, notes, paymentDate }) => {
+          showAlert({
+            title: "Full Payment Recorded",
+            message: `Full payment of ₹${amountPaid} has been recorded via ${
+              fullPaymentMethod.charAt(0).toUpperCase() +
+              fullPaymentMethod.slice(1)
+            } on ${paymentDate}.${notes ? "\nNotes: " + notes : ""}`,
+          });
+          setFullPaymentModalOpen(false);
+          setFullPaymentMethod("cash");
+        }}
+        theme={theme}
+      />
+      <ReminderModal
         isOpen={reminderModalOpen}
-        onClosed={() => setReminderModalOpen(false)}
-        backdropPressToClose
-        swipeToClose
-      >
-        <View style={styles.modalHeader}>
-          <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-            Send Payment Reminder
-          </Text>
-          <TouchableOpacity onPress={() => setReminderModalOpen(false)}>
-            <MaterialCommunityIcons
-              name="close"
-              size={24}
-              color={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.modalContent}>
-          <TextInput
-            label="Message"
-            value={reminderMessage}
-            onChangeText={setReminderMessage}
-            mode="outlined"
-            style={[
-              styles.messageInput,
-              { backgroundColor: theme.colors.surface },
-            ]}
-            multiline
-            numberOfLines={5}
-            textColor={theme.colors.onSurface}
-          />
-        </View>
-
-        <View style={styles.modalActions}>
-          <Button
-            mode="outlined"
-            onPress={() => setReminderModalOpen(false)}
-            style={styles.cancelButton}
-            textColor={theme.colors.primary}
-          >
-            Cancel
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleSendReminder}
-            style={styles.saveButton}
-          >
-            Send
-          </Button>
-        </View>
-      </Modal>
-
-      {/* Render the AlertComponent */}
+        onClose={() => setReminderModalOpen(false)}
+        reminderMessage={reminderMessage}
+        setReminderMessage={setReminderMessage}
+        onSend={handleSendReminder}
+        theme={theme}
+      />
       <AlertComponent />
     </ScrollView>
   );
