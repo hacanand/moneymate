@@ -118,29 +118,50 @@ export default function LoginScreen() {
     }
   };
 
+  // Use Clerk's user object type for type safety
+  const createUserProfileIfNeeded = async (user: any) => {
+    if (!user?.id) return;
+    
+    try {
+      await fetch("/api/user-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id,
+          email: user?.emailAddresses[0]?.emailAddress,
+          fullName: user?.fullName || undefined,
+          imageUrl: user?.imageUrl || undefined,
+        }),
+      });
+    } catch (err) {
+      console.warn("User profile creation failed", err);
+    }
+  };
+
   const handleGoogleSignIn = async (): Promise<void> => {
     try {
       setIsSigninInProgress(true);
-
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: "oauth_google",
       });
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
-
-        // Store user ID for biometric login
-        if (user?.id) {
-          await SecureStore.setItemAsync("biometric_user_id", user.id);
-
-          // In a real app, you'd need a more secure way to handle this
-          // This is just a simplified example
-          const sessionToken = await getToken();
-          if (sessionToken) {
-            await SecureStore.setItemAsync("clerk_session_token", sessionToken);
+        // Wait for Clerk to update the user object
+        setTimeout(async () => {
+          if (user?.id) {
+            await SecureStore.setItemAsync("biometric_user_id", user.id);
+            const sessionToken = await getToken();
+            if (sessionToken) {
+              await SecureStore.setItemAsync(
+                "clerk_session_token",
+                sessionToken
+              );
+            }
+            // Create user profile after sign-in with up-to-date user info
+            await createUserProfileIfNeeded(user);
           }
-        }
-
-        router.replace("/(tabs)");
+          router.replace("/(tabs)");
+        }, 500);
       }
     } catch (error) {
       console.log("Google sign-in error:", error);

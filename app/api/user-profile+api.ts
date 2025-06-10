@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { userId, email, fullName, imageUrl } = await req.json();
+     
     if (!userId || !email) {
       return NextResponse.json(
         { error: "Missing userId or email" },
