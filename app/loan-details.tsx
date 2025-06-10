@@ -33,8 +33,6 @@ export default function LoanDetailsScreen() {
   const [fullPaymentModalOpen, setFullPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [fullPaymentMethod, setFullPaymentMethod] =
-    useState<PaymentMethod>("cash");
   const [reminderMessage, setReminderMessage] = useState<string>(
     `Hello ${loan?.borrowerName}, this is a reminder that your loan payment of ₹${loan?.amount} is pending.`
   );
@@ -77,18 +75,6 @@ export default function LoanDetailsScreen() {
     setPaymentMethod("cash");
   };
 
-  const handleFullPayment = (): void => {
-    // In a real app, you would process the full payment here
-    showAlert({
-      title: "Full Payment Recorded",
-      message: `Full payment of ₹${totalAmount.toLocaleString()} has been recorded via ${
-        fullPaymentMethod.charAt(0).toUpperCase() + fullPaymentMethod.slice(1)
-      }.`,
-    });
-    setFullPaymentModalOpen(false);
-    setFullPaymentMethod("cash");
-  };
-
   const handleSendReminder = (): void => {
     // In a real app, you would send the reminder here
     showAlert({
@@ -96,6 +82,19 @@ export default function LoanDetailsScreen() {
       message: `A payment reminder has been sent to ${loan.borrowerName}.`,
     });
     setReminderModalOpen(false);
+  };
+
+  const handleFullPayment = (details: {
+    amountPaid: string;
+    notes: string;
+    paymentDate: string;
+  }) => {
+    // In a real app, you would process the full payment here
+    showAlert({
+      title: "Full Payment Recorded",
+      message: `Full payment of ₹${details.amountPaid} on ${details.paymentDate} has been recorded. Notes: ${details.notes}`,
+    });
+    setFullPaymentModalOpen(false);
   };
 
   // Calculate interest as in index page (day-wise, startDate to paidDate or today)
@@ -262,9 +261,9 @@ export default function LoanDetailsScreen() {
       />
       <View style={styles.buttonContainer}>
         <Button
-          mode="outlined"
+          mode="contained"
           onPress={() => setPaymentModalOpen(true)}
-          style={styles.button}
+          style={[styles.button, styles.paymentButton]}
           icon="cash-plus"
         >
           Record Payment
@@ -272,13 +271,12 @@ export default function LoanDetailsScreen() {
         <Button
           mode="contained"
           onPress={() => setFullPaymentModalOpen(true)}
-          style={[styles.button, styles.paymentButton]}
-          // textColor={theme.colors}
-          icon="cash"
+          style={[styles.button, { backgroundColor: theme.colors.primary }]}
+          icon="check-circle-outline"
         >
           Full Loan Payment
         </Button>
-        {/* <Button
+        <Button
           mode="outlined"
           onPress={() => setReminderModalOpen(true)}
           style={styles.button}
@@ -286,7 +284,7 @@ export default function LoanDetailsScreen() {
           textColor={theme.colors.primary}
         >
           Send Reminder
-        </Button> */}
+        </Button>
       </View>
       <PaymentModal
         isOpen={paymentModalOpen}
@@ -301,22 +299,8 @@ export default function LoanDetailsScreen() {
       <FullPaymentModal
         isOpen={fullPaymentModalOpen}
         onClose={() => setFullPaymentModalOpen(false)}
-        amountDue={totalAmount}
-        paymentMethod={fullPaymentMethod}
-        setPaymentMethod={(v: string) =>
-          setFullPaymentMethod(v as PaymentMethod)
-        }
-        onConfirm={({ amountPaid, notes, paymentDate }) => {
-          showAlert({
-            title: "Full Payment Recorded",
-            message: `Full payment of ₹${amountPaid} has been recorded via ${
-              fullPaymentMethod.charAt(0).toUpperCase() +
-              fullPaymentMethod.slice(1)
-            } on ${paymentDate}.${notes ? "\nNotes: " + notes : ""}`,
-          });
-          setFullPaymentModalOpen(false);
-          setFullPaymentMethod("cash");
-        }}
+        onConfirm={handleFullPayment}
+        defaultAmount={totalAmount.toFixed(2)}
         theme={theme}
       />
       <ReminderModal

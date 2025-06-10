@@ -9,16 +9,22 @@ const cache = new LRUCache<string, any>({
 });
 
 export async function GET(req: NextRequest) {
-  // Use IP as cache key (or userId if available)
-  const cacheKey =   req.headers.get("x-forwarded-for") || "default";
-  if (cache.has(cacheKey)) {
-    return NextResponse.json({ loans: cache.get(cacheKey), cached: true });
+  // Use userId from query or header
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get("userId") || req.headers.get("x-user-id");
+  if (!userId) {
+    return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  }
+  // Use userId as cache key
+  if (cache.has(userId)) {
+    return NextResponse.json({ loans: cache.get(userId), cached: true });
   }
   try {
     const loans = await prisma.loan.findMany({
+      where: { userId },
       orderBy: { startDate: "desc" },
     });
-    cache.set(cacheKey, loans);
+    cache.set(userId, loans);
     return NextResponse.json({ loans });
   } catch (error: any) {
     return NextResponse.json(
