@@ -50,6 +50,13 @@ export default function LoginScreen() {
     }
   }, [isSignedIn]);
 
+  useEffect(() => {
+    // Create user profile when user object becomes available after login
+    if (isSignedIn && user?.id) {
+      createUserProfileIfNeeded(user);
+    }
+  }, [isSignedIn, user?.id]);
+
   const checkBiometricAvailability = async (): Promise<void> => {
     try {
       const available = await LocalAuthentication.hasHardwareAsync();
@@ -121,9 +128,15 @@ export default function LoginScreen() {
   // Use Clerk's user object type for type safety
   const createUserProfileIfNeeded = async (user: any) => {
     if (!user?.id) return;
-    
+
+    console.log(
+      "Creating user profile for:",
+      user.id,
+      user.emailAddresses?.[0]?.emailAddress
+    );
+
     try {
-      await fetch("/api/user-profile", {
+      const response = await fetch("/api/user-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -133,6 +146,13 @@ export default function LoginScreen() {
           imageUrl: user?.imageUrl || undefined,
         }),
       });
+
+      const result = await response.json();
+      console.log("User profile creation result:", result);
+
+      if (!response.ok) {
+        console.error("Failed to create user profile:", result.error);
+      }
     } catch (err) {
       console.warn("User profile creation failed", err);
     }
@@ -146,22 +166,16 @@ export default function LoginScreen() {
       });
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
-        // Wait for Clerk to update the user object
-        setTimeout(async () => {
-          if (user?.id) {
-            await SecureStore.setItemAsync("biometric_user_id", user.id);
-            const sessionToken = await getToken();
-            if (sessionToken) {
-              await SecureStore.setItemAsync(
-                "clerk_session_token",
-                sessionToken
-              );
-            }
-            // Create user profile after sign-in with up-to-date user info
-            await createUserProfileIfNeeded(user);
+        // Store user ID for biometric login after user object is available
+        if (user?.id) {
+          await SecureStore.setItemAsync("biometric_user_id", user.id);
+          const sessionToken = await getToken();
+          if (sessionToken) {
+            await SecureStore.setItemAsync("clerk_session_token", sessionToken);
           }
-          router.replace("/(tabs)");
-        }, 500);
+        }
+        // Note: User profile creation will be handled by the useEffect hook
+        // that listens for changes to isSignedIn and user?.id
       }
     } catch (error) {
       console.log("Google sign-in error:", error);

@@ -1,3 +1,5 @@
+"use client"
+import { useUser } from "@clerk/clerk-expo";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
@@ -18,6 +20,7 @@ import { Button, Text, TextInput, useTheme } from "react-native-paper";
 export default function AddLoanScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { user } = useUser();
   const [borrowerName, setBorrowerName] = useState("");
   const [borrowerPhone, setBorrowerPhone] = useState("");
   const [amount, setAmount] = useState("");
@@ -67,6 +70,12 @@ export default function AddLoanScreen() {
 
   // Helper to submit loan after file is read
   const handleSubmitLoan = async (paymentProofData?: string) => {
+    if (!user?.id) {
+      setError("User not authenticated. Please sign in again.");
+      setLoading(false);
+      return;
+    }
+
     try {
       let apiUrl = "/api/add-loan";
       const res = await fetch(apiUrl, {
@@ -87,6 +96,7 @@ export default function AddLoanScreen() {
           paymentProofData,
           loanPurpose,
           bankAccount,
+          userId: user.id, // Add userId to the request
         }),
       });
       const data = await res.text();
@@ -592,67 +602,66 @@ export default function AddLoanScreen() {
             />
           </View>
         </ScrollView>
-        
-          <View
+
+        <View
+          style={[
+            styles.actions,
+            {
+              backgroundColor: theme.colors.background,
+              borderTopColor: theme.colors.outline,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+              elevation: 8,
+            },
+          ]}
+        >
+          <Button
+            mode="outlined"
+            onPress={() => router.back()}
             style={[
-              styles.actions,
+              styles.cancelButton,
               {
-                backgroundColor: theme.colors.background,
-                borderTopColor: theme.colors.outline,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: -2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                elevation: 8,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: theme.colors.outline,
+                backgroundColor: theme.colors.surface,
               },
             ]}
+            textColor={theme.colors.primary}
+            icon="close"
+            contentStyle={{ height: 48 }}
+            labelStyle={{
+              fontSize: 16,
+              fontFamily: "Roboto-Medium",
+              letterSpacing: 0.5,
+            }}
+            disabled={loading}
           >
-            <Button
-              mode="outlined"
-              onPress={() => router.back()}
-              style={[
-                styles.cancelButton,
-                {
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: theme.colors.outline,
-                  backgroundColor: theme.colors.surface,
-                },
-              ]}
-              textColor={theme.colors.primary}
-              icon="close"
-              contentStyle={{ height: 48 }}
-              labelStyle={{
-                fontSize: 16,
-                fontFamily: "Roboto-Medium",
-                letterSpacing: 0.5,
-              }}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button
-              mode="contained"
-              onPress={handleAddLoan}
-              style={[
-                styles.saveButton,
-                { borderRadius: 12, backgroundColor: theme.colors.primary },
-              ]}
-              icon={loading ? undefined : "check"}
-              loading={loading}
-              disabled={loading}
-              textColor={theme.dark ? "#fff" : "#fff"}
-              contentStyle={{ height: 48 }}
-              labelStyle={{
-                fontSize: 16,
-                fontFamily: "Roboto-Medium",
-                letterSpacing: 0.5,
-              }}
-            >
-              {loading ? "Saving..." : "Save Loan"}
-            </Button>
-          </View>
-         
+            Cancel
+          </Button>
+          <Button
+            mode="contained"
+            onPress={handleAddLoan}
+            style={[
+              styles.saveButton,
+              { borderRadius: 12, backgroundColor: theme.colors.primary },
+            ]}
+            icon={loading ? undefined : "check"}
+            loading={loading}
+            disabled={loading}
+            textColor={theme.dark ? "#fff" : "#fff"}
+            contentStyle={{ height: 48 }}
+            labelStyle={{
+              fontSize: 16,
+              fontFamily: "Roboto-Medium",
+              letterSpacing: 0.5,
+            }}
+          >
+            {loading ? "Saving..." : "Save Loan"}
+          </Button>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );

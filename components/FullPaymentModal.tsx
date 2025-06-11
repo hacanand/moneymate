@@ -40,45 +40,54 @@ export const FullPaymentModal: React.FC<FullPaymentModalProps> = ({
       onClosed={onClose}
       backdropPressToClose
       swipeToClose
+      animationDuration={200}
+      backdrop={true}
+      backdropOpacity={0.5}
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-          Full Loan Payment
-        </Text>
-      </View>
-      <View style={styles.content}>
-        <TextInput
-          label="Amount Paid"
-          value={amountPaid}
-          onChangeText={setAmountPaid}
-          keyboardType="numeric"
-          mode="outlined"
-          style={styles.input}
-        />
-        <TextInput
-          label="Notes"
-          value={notes}
-          onChangeText={setNotes}
-          mode="outlined"
-          style={styles.input}
-          multiline
-        />
-        <TextInput
-          label="Payment Date"
-          value={paymentDate}
-          onChangeText={setPaymentDate}
-          mode="outlined"
-          style={styles.input}
-          placeholder="YYYY-MM-DD"
-        />
-      </View>
-      <View style={styles.actions}>
-        <Button mode="outlined" onPress={onClose} style={styles.button}>
-          Cancel
-        </Button>
-        <Button mode="contained" onPress={handleConfirm} style={styles.button}>
-          Confirm
-        </Button>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: theme.colors.onSurface }]}>
+            Full Loan Payment
+          </Text>
+        </View>
+        <View style={styles.content}>
+          <TextInput
+            label="Amount Paid"
+            value={amountPaid}
+            onChangeText={setAmountPaid}
+            keyboardType="numeric"
+            mode="outlined"
+            style={styles.input}
+          />
+          <TextInput
+            label="Notes"
+            value={notes}
+            onChangeText={setNotes}
+            mode="outlined"
+            style={styles.input}
+            multiline
+          />
+          <TextInput
+            label="Payment Date"
+            value={paymentDate}
+            onChangeText={setPaymentDate}
+            mode="outlined"
+            style={styles.input}
+            placeholder="YYYY-MM-DD"
+          />
+        </View>
+        <View style={styles.actions}>
+          <Button mode="outlined" onPress={onClose} style={styles.button}>
+            Cancel
+          </Button>
+          <Button
+            mode="contained"
+            onPress={handleConfirm}
+            style={styles.button}
+          >
+            Confirm
+          </Button>
+        </View>
       </View>
     </Modal>
   );
@@ -87,11 +96,10 @@ export const FullPaymentModal: React.FC<FullPaymentModalProps> = ({
 const styles = StyleSheet.create({
   modal: {
     height: 380,
-    width: 340,
+    width: 320,
     borderRadius: 20,
     padding: 20,
-    alignSelf: "center",
-    justifyContent: "center",
+    // alignSelf: "center",
   },
   header: {
     marginBottom: 16,
@@ -109,11 +117,13 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: "row",
-    justifyContent: "space-between",
     marginTop: 10,
   },
   button: {
     flex: 1,
     marginHorizontal: 6,
+  },
+  container: {
+    flex: 1,
   },
 });

@@ -47,6 +47,7 @@ export async function POST(req: Request) {
       loanPurpose,
       bankAccount,
       status,
+      userId, // Add userId to destructuring
     } = body;
 
     // Basic validation
@@ -55,10 +56,11 @@ export async function POST(req: Request) {
       !amount ||
       !interestRate ||
       !interestRateType ||
-      !startDate
+      !startDate ||
+      !userId // Require userId
     ) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields." }),
+        JSON.stringify({ error: "Missing required fields including userId." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -99,6 +101,7 @@ export async function POST(req: Request) {
         loanPurpose,
         bankAccount,
         status: status || "active",
+        userId, // Add userId to the data
       },
     });
 
@@ -121,4 +124,4 @@ export async function POST(req: Request) {
   }
 }
 
-//  
+//

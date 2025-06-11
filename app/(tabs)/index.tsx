@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/clerk-expo";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -75,7 +76,8 @@ export default function LoanListPage() {
   const router = useRouter();
   const { showAlert, AlertComponent } = useCustomAlert();
   const insets = useSafeAreaInsets();
-  const [loans, setLoans] = useState<Loan[]>( []); // Initialize with empty array
+  const { user } = useUser();
+  const [loans, setLoans] = useState<Loan[]>([]); // Initialize with empty array
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
   const [loanTab, setLoanTab] = useState<"active" | "paid">("active");
@@ -89,9 +91,11 @@ export default function LoanListPage() {
 
   // Fetch real loans from API on mount
   useEffect(() => {
+    if (!user?.id) return; // Don't fetch loans if user is not available
+
     (async () => {
       try {
-        let apiUrl = "/api/loans";
+        let apiUrl = `/api/loans?userId=${user.id}`;
         if (
           typeof window !== "undefined" &&
           window.location &&
@@ -99,10 +103,12 @@ export default function LoanListPage() {
           window.location.hostname !== "localhost"
         ) {
           // Use relative path for web, absolute for device if needed
-          apiUrl = "/api/loans";
+          apiUrl = `/api/loans?userId=${user.id}`;
         }
+        console.log("Fetching loans for user:", user.id);
         const res = await fetch(apiUrl);
         const data = await res.json();
+        console.log("Loans API response:", data);
         if (data.loans) {
           setLoans(data.loans);
         }
@@ -111,7 +117,7 @@ export default function LoanListPage() {
         console.error("Failed to fetch loans", err);
       }
     })();
-  }, []);
+  }, [user?.id]);
 
   // Function to calculate interest earned for a loan
   const calculateInterestEarned = (loan: Loan): number => {

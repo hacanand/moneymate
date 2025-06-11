@@ -19,9 +19,9 @@ import type { Loan, Payment, PaymentMethod } from "../types/loan";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Shared card/section padding for visual consistency
-const cardPadding = 20;
-const cardMargin = 8;
-const cardHMargin = 16;
+// const cardPadding = 20;
+// const cardMargin = 8;
+// const cardHMargin = 16;
 
 export default function LoanDetailsScreen() {
   const { theme } = useTheme();

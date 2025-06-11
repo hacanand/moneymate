@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import Modal from "react-native-modalbox";
 import { Button, Text, TextInput } from "react-native-paper";
 
@@ -27,40 +27,52 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
     onClosed={onClose}
     backdropPressToClose
     swipeToClose
+    animationDuration={200}
+    backdrop={true}
+    backdropOpacity={0.5}
   >
-    <View style={styles.modalHeader}>
-      <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
-        Send Payment Reminder
-      </Text>
-      <Button onPress={onClose} icon="close" compact>
-        Close
-      </Button>
-    </View>
-    <View style={styles.modalContent}>
-      <TextInput
-        label="Message"
-        value={reminderMessage}
-        onChangeText={setReminderMessage}
-        mode="outlined"
-        style={[styles.messageInput, { backgroundColor: theme.colors.surface }]}
-        multiline
-        numberOfLines={5}
-        textColor={theme.colors.onSurface}
-      />
-    </View>
-    <View style={styles.modalActions}>
-      <Button
-        mode="outlined"
-        onPress={onClose}
-        style={styles.cancelButton}
-        textColor={theme.colors.primary}
-      >
-        Cancel
-      </Button>
-      <Button mode="contained" onPress={onSend} style={styles.saveButton}>
-        Send
-      </Button>
-    </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+      style={styles.container}
+    >
+      <View style={styles.modalHeader}>
+        <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
+          Send Payment Reminder
+        </Text>
+        {/* <Button onPress={onClose} icon="close" compact>
+          Close
+        </Button> */}
+      </View>
+      <View style={styles.modalContent}>
+        <TextInput
+          label="Message"
+          value={reminderMessage}
+          onChangeText={setReminderMessage}
+          mode="outlined"
+          style={[
+            styles.messageInput,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          multiline
+          numberOfLines={5}
+          textColor={theme.colors.onSurface}
+        />
+      </View>
+      <View style={styles.modalActions}>
+        <Button
+          mode="outlined"
+          onPress={onClose}
+          style={styles.cancelButton}
+          textColor={theme.colors.primary}
+        >
+          Cancel
+        </Button>
+        <Button mode="contained" onPress={onSend} style={styles.saveButton}>
+          Send
+        </Button>
+      </View>
+    </KeyboardAvoidingView>
   </Modal>
 );
 
@@ -72,8 +84,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    // flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
   },
@@ -89,7 +100,6 @@ const styles = StyleSheet.create({
   },
   modalActions: {
     flexDirection: "row",
-    justifyContent: "space-between",
     marginTop: 20,
   },
   cancelButton: {
@@ -100,5 +110,8 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     backgroundColor: "#2E7D32",
+  },
+  container: {
+    flex: 1,
   },
 });

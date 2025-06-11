@@ -36,9 +36,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
         Record Payment
       </Text>
-      <Button onPress={onClose} icon="close" compact>
+      {/* <Button onPress={onClose} icon="close" compact>
         Close
-      </Button>
+      </Button> */}
     </View>
     <View style={styles.modalContent}>
       <TextInput
@@ -134,14 +134,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
 const styles = StyleSheet.create({
   modal: {
-    height: 300,
+    height: 350,
     width: 320,
     borderRadius: 20,
     padding: 20,
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    // flexDirection: "row",
+    // justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
   },
