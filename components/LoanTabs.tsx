@@ -1,6 +1,13 @@
 import React from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
-import { Chip } from "react-native-paper";
+import { Dimensions, StyleSheet, TouchableOpacity, View } from "react-native";
+import * as Animatable from "react-native-animatable";
+import { Text } from "react-native-paper";
+
+// Minimalistic design constants
+const TAB_CONTAINER_MARGIN = 16;
+const TAB_BAR_HEIGHT = 48;
+const TAB_BORDER_RADIUS = 12;
+const INDICATOR_HEIGHT = 3;
 
 interface LoanTabsProps {
   loanTab: "active" | "paid";
@@ -15,72 +22,118 @@ export const LoanTabs: React.FC<LoanTabsProps> = ({
   scrollRef,
   theme,
 }) => (
-  <View style={styles.loanTabChipsContainer}>
-    <Chip
-      mode={loanTab === "active" ? "flat" : "outlined"}
-      selected={loanTab === "active"}
-      onPress={() => {
-        setLoanTab("active");
-        scrollRef.current?.scrollTo({ x: 0, animated: true });
-      }}
+  <View style={styles.container}>
+    <View
       style={[
-        styles.loanTabChip,
-        loanTab === "active" && styles.selectedLoanTabChip,
+        styles.tabBar,
+        {
+          backgroundColor: theme.colors.surface,
+          borderBottomColor: theme.colors.outline,
+        },
       ]}
-      textStyle={
-        loanTab === "active"
-          ? styles.selectedChipText
-          : { color: theme.colors.onSurface }
-      }
     >
-      Active Loans
-    </Chip>
-    <Chip
-      mode={loanTab === "paid" ? "flat" : "outlined"}
-      selected={loanTab === "paid"}
-      onPress={() => {
-        setLoanTab("paid");
-        scrollRef.current?.scrollTo({
-          x: Dimensions.get("window").width,
-          animated: true,
-        });
-      }}
-      style={[
-        styles.loanTabChip,
-        loanTab === "paid" && styles.selectedLoanTabChip,
-      ]}
-      textStyle={
-        loanTab === "paid"
-          ? styles.selectedChipText
-          : { color: theme.colors.onSurface }
-      }
-    >
-      Paid Loans
-    </Chip>
+      {/* Active Tab */}
+      <TouchableOpacity
+        style={styles.tabButton}
+        onPress={() => {
+          setLoanTab("active");
+          scrollRef.current?.scrollTo({ x: 0, animated: true });
+        }}
+        activeOpacity={0.7}
+      >
+        <Text
+          style={[
+            styles.tabText,
+            {
+              color:
+                loanTab === "active"
+                  ? theme.colors.primary
+                  : theme.colors.onSurfaceVariant,
+              fontWeight: loanTab === "active" ? "600" : "400",
+            },
+          ]}
+        >
+          Active
+        </Text>
+        {loanTab === "active" && (
+          <Animatable.View
+            animation="fadeInUp"
+            duration={200}
+            style={[
+              styles.activeIndicator,
+              { backgroundColor: theme.colors.primary },
+            ]}
+          />
+        )}
+      </TouchableOpacity>
+
+      {/* Paid Tab */}
+      <TouchableOpacity
+        style={styles.tabButton}
+        onPress={() => {
+          setLoanTab("paid");
+          scrollRef.current?.scrollTo({
+            x: Dimensions.get("window").width,
+            animated: true,
+          });
+        }}
+        activeOpacity={0.7}
+      >
+        <Text
+          style={[
+            styles.tabText,
+            {
+              color:
+                loanTab === "paid"
+                  ? theme.colors.primary
+                  : theme.colors.onSurfaceVariant,
+              fontWeight: loanTab === "paid" ? "600" : "400",
+            },
+          ]}
+        >
+          Paid
+        </Text>
+        {loanTab === "paid" && (
+          <Animatable.View
+            animation="fadeInUp"
+            duration={200}
+            style={[
+              styles.activeIndicator,
+              { backgroundColor: theme.colors.primary },
+            ]}
+          />
+        )}
+      </TouchableOpacity>
+    </View>
   </View>
 );
 
 const styles = StyleSheet.create({
-  loanTabChipsContainer: {
+  container: {
+    paddingHorizontal: TAB_CONTAINER_MARGIN,
+  },
+  tabBar: {
     flexDirection: "row",
+    height: TAB_BAR_HEIGHT,
+    borderBottomWidth: 1,
+  },
+  tabButton: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
-    paddingHorizontal: 8,
-    gap: 8,
+    position: "relative",
   },
-  loanTabChip: {
-    marginHorizontal: 4,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-  },
-  selectedLoanTabChip: {
-    backgroundColor: "#2E7D32",
-  },
-  selectedChipText: {
-    color: "#FFFFFF",
+  tabText: {
     fontFamily: "Roboto-Medium",
-    fontSize: 14,
+    fontSize: 16,
+    textAlign: "center",
+  },
+  activeIndicator: {
+    position: "absolute",
+    bottom: 0,
+    left: "25%",
+    right: "25%",
+    height: INDICATOR_HEIGHT,
+    borderRadius: INDICATOR_HEIGHT / 2,
   },
 });

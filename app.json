@@ -1,5 +1,4 @@
 {
- 
   "expo": {
     "name": "MoneyMate",
     "slug": "moneymate",
@@ -15,13 +14,10 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-     
-   "androidStatusBar": {
+    "androidStatusBar": {
       "translucent": false,
       "backgroundColor": "#ffffff"
-     
     },
-     
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moneymate.app"
@@ -31,8 +27,11 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#2E7D32"
       },
-       
-      "package": "com.moneymate.app"
+      "package": "com.moneymate.app",
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png",
@@ -50,6 +49,14 @@
           "origin": "http://localhost:8081"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {
+        "origin": "http://localhost:8081"
+      },
+      "eas": {
+        "projectId": "259d7bdf-4395-44ee-b549-1961f6d5de26"
+      }
+    }
   }
 }

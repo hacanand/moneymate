@@ -7,12 +7,13 @@ import { useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
   type ListRenderItem,
 } from "react-native";
-import { Button, Text, useTheme } from "react-native-paper";
+import { ActivityIndicator, FAB, Text, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCustomAlert } from "../../components/CustomAlert";
 import { LoanCard } from "../../components/LoanCard";
@@ -20,104 +21,66 @@ import { LoanTabs } from "../../components/LoanTabs";
 import { SummaryCards } from "../../components/SummaryCards";
 import type { Loan, LoanStatus } from "../../types/loan";
 
-// Get screen dimensions
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-// Mock data for loans
-// const initialLoans: Loan[] = [
-//   {
-//     id: "1",
-//     borrowerName: "John Smith",
-//     amount: 5000,
-//     date: "2023-05-01",
-//     dueDate: "2023-06-01",
-//     status: "active",
-//     interestRate: 5,
-//     interestRateType: "monthly",
-//   },
-//   {
-//     id: "2",
-//     borrowerName: "Sarah Johnson",
-//     amount: 2500,
-//     date: "2023-04-15",
-//     dueDate: "2023-05-15",
-//     status: "active",
-//     interestRate: 5,
-//     interestRateType: "monthly",
-//   },
-//   {
-//     id: "3",
-//     borrowerName: "Michael Brown",
-//     amount: 10000,
-//     date: "2023-03-20",
-//     dueDate: "2023-09-20",
-//     status: "active",
-//     interestRate: 6,
-//     interestRateType: "yearly",
-//   },
-//   {
-//     id: "4",
-//     borrowerName: "Emily Davis",
-//     amount: 1500,
-//     date: "2023-04-10",
-//     dueDate: "2023-05-10",
-//     status: "paid",
-//     interestRate: 4,
-//     interestRateType: "monthly",
-//   },
-// ];
-
-// Shared card/section padding for visual consistency
-const cardPadding = 20;
-const cardMargin = 16;
+// Professional design constants - matching LoanCard design
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CONTENT_PADDING = 16;
+const CARD_MARGIN = 16;
+const BORDER_RADIUS = 16;
+const FAB_MARGIN = 16;
 
 export default function LoanListPage() {
   const theme = useTheme();
   const router = useRouter();
   const { showAlert, AlertComponent } = useCustomAlert();
   const insets = useSafeAreaInsets();
-  const { user } = useUser();
-  const [loans, setLoans] = useState<Loan[]>([]); // Initialize with empty array
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
+  const { user, isLoaded: isUserLoaded, isSignedIn } = useUser();
+
+  // State management
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loanTab, setLoanTab] = useState<"active" | "paid">("active");
 
-  // Filter state
-  const [statusFilter, setStatusFilter] = useState<"all" | LoanStatus>("all");
-
-  // Modal references
-  const filterModalRef = useRef<any>(null);
+  // Refs
   const scrollRef = useRef<ScrollView>(null);
 
-  // Fetch real loans from API on mount
-  useEffect(() => {
-    if (!user?.id) return; // Don't fetch loans if user is not available
+  // Fetch real loans from API
+  const fetchLoans = async () => {
+    if (!user?.id) return;
 
-    (async () => {
-      try {
-        let apiUrl = `/api/loans?userId=${user.id}`;
-        if (
-          typeof window !== "undefined" &&
-          window.location &&
-          window.location.hostname &&
-          window.location.hostname !== "localhost"
-        ) {
-          // Use relative path for web, absolute for device if needed
-          apiUrl = `/api/loans?userId=${user.id}`;
-        }
-        console.log("Fetching loans for user:", user.id);
-        const res = await fetch(apiUrl);
-        const data = await res.json();
-        console.log("Loans API response:", data);
-        if (data.loans) {
-          setLoans(data.loans);
-        }
-      } catch (err) {
-        // Optionally show error
-        console.error("Failed to fetch loans", err);
+    try {
+      setLoading(true);
+      const apiUrl = `/api/loans?userId=${user.id}`;
+      console.log("Fetching loans for user:", user.id);
+      const res = await fetch(apiUrl);
+      const data = await res.json();
+      console.log("Loans API response:", data);
+      if (data.loans) {
+        setLoans(data.loans);
       }
-    })();
-  }, [user?.id]);
+    } catch (err) {
+      console.error("Failed to fetch loans", err);
+      console.error("Failed to fetch loans", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch on mount
+  useEffect(() => {
+    if (isUserLoaded && isSignedIn && user?.id) {
+      fetchLoans();
+    } else if (isUserLoaded && !isSignedIn) {
+      setLoading(false);
+    }
+  }, [user?.id, isUserLoaded, isSignedIn]);
+
+  // Refresh function
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchLoans();
+    setRefreshing(false);
+  };
 
   // Function to calculate interest earned for a loan
   const calculateInterestEarned = (loan: Loan): number => {
@@ -144,31 +107,16 @@ export default function LoanListPage() {
     return interest;
   };
 
-  // Filter loans based on search query, status filter, and showPaidLoans toggle
-  const filteredLoans = loans
-    .filter((loan) =>
-      loan.borrowerName.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .filter((loan) => {
-      if (statusFilter !== "all") {
-        return loan.status === statusFilter;
-      }
-      // If showPaidLoans is false, only show active loans
-      return loan.status === "active";
-    });
+  // Calculate statistics
+  const activeLoans = loans.filter((loan) => loan.status === "active");
+  const paidLoans = loans.filter((loan) => loan.status === "paid");
 
-  // Calculate total active loans amount
-  const totalActive = loans
-    .filter((loan) => loan.status === "active")
-    .reduce((sum, loan) => sum + loan.amount, 0);
-
-  // Calculate total interest earned on active loans
-  const totalInterest = loans
-    .filter((loan) => loan.status === "active")
-    .reduce((sum, loan) => sum + calculateInterestEarned(loan), 0);
-
-  // Count paid loans
-  const paidLoansCount = loans.filter((loan) => loan.status === "paid").length;
+  const totalActive = activeLoans.reduce((sum, loan) => sum + loan.amount, 0);
+  const totalInterest = activeLoans.reduce(
+    (sum, loan) => sum + calculateInterestEarned(loan),
+    0
+  );
+  const paidLoansCount = paidLoans.length;
 
   const getStatusColor = (status: LoanStatus): string => {
     switch (status) {
@@ -196,17 +144,36 @@ export default function LoanListPage() {
     />
   );
 
-  const onChangeSearch = (query: string): void => setSearchQuery(query);
+  // Show loading state
+  if (loading && loans.length === 0) {
+    return (
+      <View
+        style={[
+          styles.container,
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.onSurface }]}>
+          Loading your loans...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      {/* Header with Summary Cards */}
       <SummaryCards
         totalActive={totalActive}
         totalInterest={totalInterest}
         theme={theme}
       />
+
+      {/* Tab Navigation */}
       <LoanTabs
         loanTab={loanTab}
         setLoanTab={setLoanTab}
@@ -214,7 +181,7 @@ export default function LoanListPage() {
         theme={theme}
       />
 
-      {/* Loan list with swipeable pages */}
+      {/* Main Content - Swipeable Loan Lists */}
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -228,58 +195,107 @@ export default function LoanListPage() {
           setLoanTab(page === 0 ? "active" : "paid");
         }}
         contentOffset={{
-          x: loanTab === "active" ? 0 : Dimensions.get("window").width,
+          x: loanTab === "active" ? 0 : SCREEN_WIDTH,
           y: 0,
         }}
-        style={{ flex: 1 }}
+        style={styles.pagesContainer}
       >
         {/* Active Loans Page */}
-        <View style={{ width: Dimensions.get("window").width }}>
+        <View style={[styles.pageContainer, { width: SCREEN_WIDTH }]}>
           <FlatList
-            data={loans.filter((loan) => loan.status === "active")}
+            data={activeLoans}
             renderItem={renderLoanItem}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.loansList}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons
-                  name="cash-remove"
-                  size={64}
-                  color={theme.colors.onSurfaceVariant}
-                />
+              <View style={styles.emptyStateContainer}>
+                <View
+                  style={[
+                    styles.emptyStateIcon,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="cash-remove"
+                    size={48}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </View>
                 <Text
                   style={[
-                    styles.emptyText,
+                    styles.emptyStateTitle,
+                    { color: theme.colors.onSurface },
+                  ]}
+                >
+                  No Active Loans
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyStateSubtitle,
                     { color: theme.colors.onSurfaceVariant },
                   ]}
                 >
-                  No active loans
+                  Start by adding your first loan to track your lending activity
                 </Text>
               </View>
             }
           />
         </View>
+
         {/* Paid Loans Page */}
-        <View style={{ width: Dimensions.get("window").width }}>
+        <View style={[styles.pageContainer, { width: SCREEN_WIDTH }]}>
           <FlatList
-            data={loans.filter((loan) => loan.status === "paid")}
+            data={paidLoans}
             renderItem={renderLoanItem}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.loansList}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons
-                  name="cash-check"
-                  size={64}
-                  color={theme.colors.onSurfaceVariant}
-                />
+              <View style={styles.emptyStateContainer}>
+                <View
+                  style={[
+                    styles.emptyStateIcon,
+                    { backgroundColor: theme.colors.surfaceVariant },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="cash-check"
+                    size={48}
+                    color={theme.colors.onSurfaceVariant}
+                  />
+                </View>
                 <Text
                   style={[
-                    styles.emptyText,
+                    styles.emptyStateTitle,
+                    { color: theme.colors.onSurface },
+                  ]}
+                >
+                  No Paid Loans
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyStateSubtitle,
                     { color: theme.colors.onSurfaceVariant },
                   ]}
                 >
-                  No paid loans
+                  Completed loans will appear here once they're marked as paid
                 </Text>
               </View>
             }
@@ -287,13 +303,20 @@ export default function LoanListPage() {
         </View>
       </ScrollView>
 
-      <Button
-        mode="contained"
+      {/* Floating Action Button */}
+      <FAB
+        icon="plus"
+        style={[
+          styles.fab,
+          {
+            backgroundColor: theme.colors.primary,
+            bottom: insets.bottom + FAB_MARGIN,
+          },
+        ]}
+        color={theme.colors.onPrimary}
         onPress={() => router.push("/add-loan")}
-        style={{ margin: 16 }}
-      >
-        Add New Loan
-      </Button>
+        label="Add Loan"
+      />
 
       <AlertComponent />
     </View>
@@ -301,283 +324,93 @@ export default function LoanListPage() {
 }
 
 const styles = StyleSheet.create({
+  // Main container
   container: {
     flex: 1,
   },
 
-  searchbar: {
-    flex: 1,
-    marginRight: 8,
+  // Header
+  header: {
+    paddingHorizontal: CONTENT_PADDING,
+    paddingBottom: 16,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  filterButton: {
-    padding: 8,
-  },
-  summaryContainer: {
-    paddingHorizontal: 8,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  summaryCard: {
-    padding: 16,
-    borderRadius: 8,
-    elevation: 4,
-  },
-  summaryTitle: {
-    fontSize: 14,
-    fontFamily: "Roboto-Regular",
-  },
-  summaryAmount: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 28,
     fontFamily: "Roboto-Bold",
-  },
-  loansList: {
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 80,
-  },
-  loanCard: {
-    marginBottom: 16,
-    borderRadius: 12,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    gap: 8,
-  },
-  statusChip: {
-    height: 24,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statusChipText: {
-    color: "#FFFFFF",
-    fontFamily: "Roboto-Medium",
-    fontSize: 12,
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-  },
-  cardAmountDateRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    marginTop: 0,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(0,0,0,0.1)",
-    marginVertical: 12,
-  },
-  cardDetailsGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 0,
-    gap: 8,
-    minHeight: 48,
-  },
-  cardDetailCol: {
-    flex: 1,
-    alignItems: "flex-start",
-    justifyContent: "center",
-    minWidth: 0,
-    minHeight: 48,
-  },
-  cardDetailColRight: {
-    flex: 1,
-    alignItems: "flex-end",
-    justifyContent: "center",
-    minWidth: 0,
-    minHeight: 48,
-  },
-  detailLabel: {
-    fontSize: 12,
-    fontFamily: "Roboto-Regular",
+    fontWeight: "700",
     marginBottom: 4,
   },
-  detailValue: {
+  headerSubtitle: {
     fontSize: 16,
-    fontFamily: "Roboto-Medium",
-  },
-  detailUnit: {
-    fontSize: 12,
-    fontFamily: "Roboto-Regular",
-    color: "#888",
-    marginLeft: 2,
-  },
-  loanHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  loanAmountOld: {
-    fontSize: 18,
-    fontFamily: "Roboto-Bold",
-    marginTop: 4,
-  },
-  loanDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  detailText: {
     fontFamily: "Roboto-Regular",
   },
-  fab: {
-    position: "absolute",
-    margin: 16,
-    right: 0,
-  },
-  modal: {
-    height: 300,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-  },
-  addLoanModal: {
-    height: 550,
-    width: SCREEN_WIDTH - 40,
-    borderRadius: 20,
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: "Roboto-Bold",
-  },
-  filterOptions: {
-    marginBottom: 20,
-  },
-  filterLabel: {
-    fontSize: 16,
-    fontFamily: "Roboto-Medium",
-    marginBottom: 10,
-  },
-  statusButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  selectedChip: {
-    backgroundColor: "#2E7D32",
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
-  },
-  resetButton: {
-    flex: 1,
-    marginRight: 8,
-  },
-  applyButton: {
-    flex: 1,
-    marginLeft: 8,
-    backgroundColor: "#2E7D32",
-  },
-  cancelButton: {
-    flex: 1,
-    marginRight: 8,
-  },
-  saveButton: {
-    flex: 1,
-    marginLeft: 8,
-    backgroundColor: "#2E7D32",
-  },
-  buttonLabel: {
-    fontFamily: "Roboto-Medium",
-  },
-  addLoanForm: {
-    flex: 1,
-  },
-  input: {
-    marginBottom: 12,
-  },
-  dateContainer: {
-    marginBottom: 12,
-  },
-  dateLabel: {
-    fontSize: 14,
-    fontFamily: "Roboto-Regular",
-    marginBottom: 8,
-  },
-  dateButton: {
-    marginBottom: 4,
-  },
-  emptyContainer: {
-    alignItems: "center",
+
+  // Loading state
+  loadingContainer: {
     justifyContent: "center",
+    alignItems: "center",
     padding: 40,
   },
-  emptyText: {
-    fontSize: 18,
+  loadingText: {
+    fontSize: 16,
     fontFamily: "Roboto-Medium",
     marginTop: 16,
+    textAlign: "center",
   },
-  emptySubtext: {
-    fontSize: 14,
-    fontFamily: "Roboto-Regular",
-    marginTop: 8,
+
+  // Pages and lists
+  pagesContainer: {
+    flex: 1,
   },
-  interestRateTypeContainer: {
-    marginBottom: 12,
+  pageContainer: {
+    flex: 1,
   },
-  methodOptions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  listContainer: {
+    padding: CONTENT_PADDING,
+    paddingBottom: 100, // Extra space for FAB
   },
-  methodChip: {
-    margin: 4,
-  },
-  loanTabChipsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
+
+  // Empty states
+  emptyStateContainer: {
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyStateIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontFamily: "Roboto-Bold",
+    textAlign: "center",
     marginBottom: 8,
-    paddingHorizontal: 8,
-    gap: 8,
   },
-  loanTabChip: {
-    marginHorizontal: 4,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-  },
-  selectedLoanTabChip: {
-    backgroundColor: "#2E7D32",
-  },
-  borrowerName: {
-    fontSize: 18,
-    fontFamily: "Roboto-Bold",
-    flexShrink: 1,
-    marginRight: 8,
-  },
-  loanAmount: {
-    fontSize: 18,
-    fontFamily: "Roboto-Bold",
-    marginRight: 8,
-  },
-  loanDate: {
-    fontSize: 14,
+  emptyStateSubtitle: {
+    fontSize: 16,
     fontFamily: "Roboto-Regular",
-    alignSelf: "flex-end",
+    textAlign: "center",
+    lineHeight: 24,
   },
-  selectedChipText: {
-    color: "#FFFFFF",
-    fontFamily: "Roboto-Medium",
-    fontSize: 14,
+
+  // Floating Action Button
+  fab: {
+    position: "absolute",
+    right: FAB_MARGIN,
+    borderRadius: 28,
+    elevation: 8,
   },
 });

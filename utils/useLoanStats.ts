@@ -85,7 +85,7 @@ interface UseLoanStatsReturn {
 export function useLoanStats({
   userId,
   timeframe = "30d",
-  refreshInterval = 5 * 60 * 1000, // 5 minutes default
+  refreshInterval = 30 * 60 * 1000, // 30 minutes default
   autoRefresh = false,
 }: UseLoanStatsOptions): UseLoanStatsReturn {
   const [stats, setStats] = useState<LoanStats | null>(null);

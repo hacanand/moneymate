@@ -116,7 +116,7 @@ export const createPaymentsKey = (userId: string, loanId?: string) =>
 // Cache TTL helpers with different default TTLs for different data types
 export const isCacheExpired = (
   cachedData: CachedData<any> | undefined,
-  ttlMs: number = 5 * 60 * 1000 // Default 5 minutes
+  ttlMs: number = 30 * 60 * 1000 // Default 10 minutes
 ): boolean => {
   if (!cachedData || !cachedData.timestamp) return true;
   return Date.now() - cachedData.timestamp > ttlMs;
