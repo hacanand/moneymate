@@ -276,7 +276,7 @@ export default function LoanDetailsScreen() {
         >
           Full Loan Payment
         </Button>
-        <Button
+        {/* <Button
           mode="outlined"
           onPress={() => setReminderModalOpen(true)}
           style={styles.button}
@@ -284,7 +284,7 @@ export default function LoanDetailsScreen() {
           textColor={theme.colors.primary}
         >
           Send Reminder
-        </Button>
+        </Button> */}
       </View>
       <PaymentModal
         isOpen={paymentModalOpen}
@@ -303,14 +303,14 @@ export default function LoanDetailsScreen() {
         defaultAmount={totalAmount.toFixed(2)}
         theme={theme}
       />
-      <ReminderModal
+      {/* <ReminderModal
         isOpen={reminderModalOpen}
         onClose={() => setReminderModalOpen(false)}
         reminderMessage={reminderMessage}
         setReminderMessage={setReminderMessage}
         onSend={handleSendReminder}
         theme={theme}
-      />
+      /> */}
       <AlertComponent />
     </ScrollView>
   );

@@ -25,24 +25,25 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
     position="center"
     isOpen={isOpen}
     onClosed={onClose}
-    backdropPressToClose
-    swipeToClose
+    backdropPressToClose={false}
+    swipeToClose={false}
     animationDuration={200}
     backdrop={true}
     backdropOpacity={0.5}
+    coverScreen={true}
   >
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={0}
-      style={styles.container}
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={60}
     >
       <View style={styles.modalHeader}>
         <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
           Send Payment Reminder
         </Text>
         {/* <Button onPress={onClose} icon="close" compact>
-          Close
-        </Button> */}
+        Close
+      </Button> */}
       </View>
       <View style={styles.modalContent}>
         <TextInput
@@ -78,10 +79,19 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 
 const styles = StyleSheet.create({
   modal: {
-    height: 300,
     width: 320,
+    maxWidth: "90%",
+    height: 300,
+    maxHeight: 360,
     borderRadius: 20,
-    padding: 20,
+    padding: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    marginTop: -150, // Half of height
+    marginLeft: -160, // Half of width
   },
   modalHeader: {
     // flexDirection: "row",
@@ -100,7 +110,7 @@ const styles = StyleSheet.create({
   },
   modalActions: {
     flexDirection: "row",
-    marginTop: 20,
+    marginTop: 10,
   },
   cancelButton: {
     flex: 1,
@@ -112,6 +122,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#2E7D32",
   },
   container: {
-    flex: 1,
+    padding: 20,
+    justifyContent: "space-between",
+    // No flex: 1 here
   },
 });

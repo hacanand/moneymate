@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import Modal from "react-native-modalbox";
 import { Button, Text, TextInput } from "react-native-paper";
 
@@ -38,13 +38,18 @@ export const FullPaymentModal: React.FC<FullPaymentModalProps> = ({
       position="center"
       isOpen={isOpen}
       onClosed={onClose}
-      backdropPressToClose
-      swipeToClose
+      backdropPressToClose={false}
+      swipeToClose={false}
       animationDuration={200}
       backdrop={true}
       backdropOpacity={0.5}
+      coverScreen={true}
     >
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={20}
+      >
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.colors.onSurface }]}>
             Full Loan Payment
@@ -88,7 +93,7 @@ export const FullPaymentModal: React.FC<FullPaymentModalProps> = ({
             Confirm
           </Button>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -96,10 +101,16 @@ export const FullPaymentModal: React.FC<FullPaymentModalProps> = ({
 const styles = StyleSheet.create({
   modal: {
     height: 380,
-    width: 320,
+    width: 325,
     borderRadius: 20,
-    padding: 20,
-    // alignSelf: "center",
+    padding: 16,
+    justifyContent: "center",
+    // alignItems: "center",
+    position: "absolute",
+    // top: "50%",
+    // left: "50%",
+    // marginTop: -190, // Half of height
+    // marginLeft: -160, // Half of width
   },
   header: {
     marginBottom: 16,

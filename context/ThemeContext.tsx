@@ -117,7 +117,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Get the current theme based on dark mode state
+  // Get the current theme based on dark mode state`
   const theme = isDark ? darkTheme : lightTheme;
 
   return (
