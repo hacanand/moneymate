@@ -48,7 +48,8 @@
         {
           "origin": "http://localhost:8081"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "router": {
