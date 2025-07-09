@@ -27,6 +27,7 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#2E7D32"
       },
+      
       "package": "com.moneymate.app",
       "permissions": [
         "android.permission.USE_BIOMETRIC",
