@@ -15,19 +15,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          bun-version: latest
-
+          node-version: '18'
+            cache: 'npm'
+            
       - name: Install Dependencies
-        run: bun install
+        run: npm install
 
       - name: Install Expo & EAS CLI
-        run: bun add -g eas-cli expo-cli
+        run: npm install -g eas-cli expo-cli
 
       - name: Install json CLI
-        run: bun add -g json   
+        run: npm install -g json
 
       - name: Extract Version from Tag
         id: get_version
