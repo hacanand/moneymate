@@ -2,8 +2,8 @@ name: Expo CI/CD with apk in release assets
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*.*.*"
 
 jobs:
   build-and-release:
